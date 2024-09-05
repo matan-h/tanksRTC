@@ -2,6 +2,11 @@
 name: Deploy TS site to Page
 
 on:
+  push:
+    paths:
+      - '**.ts'
+      - '**.css'
+      - '**.html'
   create:
     tags:
     - 'v*'

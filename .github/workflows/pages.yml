@@ -1,5 +1,5 @@
 # Workflow for building and deploying a TS site to GitHub Pages
-name: Deploy React site to Page
+name: Deploy TS site to Page
 
 on:
   create:
@@ -43,7 +43,7 @@ jobs:
         id: pages
         uses: actions/configure-pages@v1
       - name: cp names
-        run: mkdir -p build/lab/tanksRTC && cp dist/* build/lab/tanksRTC
+        run: mkdir -p build/lab/tanksRTC && cp -r dist/* build/lab/tanksRTC
 
       - name: Upload artifact
         # This will automatically upload an artifact from the 'build' directory

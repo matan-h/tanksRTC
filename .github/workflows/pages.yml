@@ -42,15 +42,15 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v1
-      - name: cp names
-        run: mkdir -p build/lab/tanksRTC && cp -r dist/* build/lab/tanksRTC
+      #- name: cp names
+      #  run: mkdir -p build/lab/tanksRTC && cp -r dist/* build/lab/tanksRTC
 
       - name: Upload artifact
         # This will automatically upload an artifact from the 'build' directory
         uses: actions/upload-pages-artifact@v1
         # if: ${{ success() && github.ref == 'refs/heads/main' }}
         with:
-          path: ./build/
+          path: ./dist/
 
   # Deployment job
   deploy:

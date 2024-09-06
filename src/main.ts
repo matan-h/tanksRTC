@@ -1,4 +1,4 @@
-import { joinRoom, selfId } from 'trystero'; 
+import { joinRoom, selfId } from 'trystero';
 import type { Room, ActionSender, DataPayload, ActionReceiver } from 'trystero';
 // HTML
 const params = new URLSearchParams(location.search);
@@ -52,6 +52,18 @@ type Action = {
     message?: string;
     originalcreationTime?: number
 };
+type GameSize = {
+    width: number
+    height: number
+}
+
+interface TankDirection {
+    isMovingRight: boolean;
+    isMovingLeft: boolean;
+    isMovingUp: boolean;
+    isMovingDown: boolean;
+}
+
 
 // Constants
 const APPID = "multiplayer-tank-game";
@@ -59,13 +71,18 @@ const APPID = "multiplayer-tank-game";
 const TANK_SIZE = 30;
 const BULLET_SIZE = 10;
 const WALL_SIZE = 100;
-const WALL_SPACING = 0.2;
+
+const WALL_VSPACING = 0.2
 const BULLET_LIFE = 5;
 const FADE_START = 0.10;
 const PING_INTERVAL = 1000;
 const PING_ALLOWED_MISSES = 5;
 
-  
+// If the angle is greater than n radians, reject teleportation
+const MAX_TELEPORT_DEGREES = Math.PI / 4; // 45 degrees in radians
+// Maximum teleport wall iterations
+const MAX_TELEPORT_DISTANCE = 200;
+
 class Tank {
     x: number;
     y: number;
@@ -122,67 +139,182 @@ class Tank {
         ctx.fill();
         ctx.restore();
     }
-    update_controls(keys: { [key: string]: boolean }, bullets: Bullet[]):Bullet|undefined {
+    update_controls(keys: { [key: string]: boolean }, bullets: Bullet[]): Bullet | undefined {
         if (!this.controls) return
 
         if (keys[this.controls.left]) this.rotate(-1);
         if (keys[this.controls.right]) this.rotate(1);
         if (keys[this.controls.shoot]) return this.shoot(bullets);
 
-
     }
 
-    move(walls: Wall[], canvas: HTMLCanvasElement, keys: { [key: string]: boolean }) {
+    getDirection(keys: { [key: string]: boolean }): TankDirection | undefined {
         if (!this.controls) return
+
+        const cosAngle = Math.cos(this.angle);
+        const sinAngle = Math.sin(this.angle);
+
+        // Determine direction based on angle and pressed keys
+        const isMovingRight = cosAngle > 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
+        const isMovingLeft = cosAngle < 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
+        const isMovingDown = sinAngle > 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
+        const isMovingUp = sinAngle < 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
+
+        return {
+            isMovingRight: keys[this.controls.up] ? isMovingRight : keys[this.controls.down] && isMovingLeft,
+            isMovingLeft: keys[this.controls.up] ? isMovingLeft : keys[this.controls.down] && isMovingRight,
+            isMovingUp: keys[this.controls.up] ? isMovingUp : keys[this.controls.down] && isMovingDown,
+            isMovingDown: keys[this.controls.up] ? isMovingDown : keys[this.controls.down] && isMovingUp,
+        };
+    }
+
+
+    private findGroupEnd(startX: number, startY: number, walls: Wall[], size: GameSize, isMovingBackward: boolean): { x: number; y: number, group: Wall[] } | null {
+        const group: Wall[] = [];
+
         const tankHalfSize = TANK_SIZE / 2;
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
+        let endX = startX;
+        let endY = startY;
+
+        // Determine direction of movement based on angle
+        let angle = this.angle
+        if (isMovingBackward){
+            // angle = angle+180
+            angle = angle+Math.PI
+        }
+        let cosAngle = Math.cos(angle);
+        let sinAngle = Math.sin(angle);
+
+        // Define the direction based on the angle (4 possible directions)
+        const isMovingRight = cosAngle > 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
+        const isMovingLeft = cosAngle < 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
+        const isMovingDown = sinAngle > 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
+        const isMovingUp = sinAngle < 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
+
+        // Define movement offsets for each direction
+        const offsetX = isMovingRight ? 1 : isMovingLeft ? -1 : 0;
+        const offsetY = isMovingDown ? 1 : isMovingUp ? -1 : 0;
+
+        // const degrees45 = Math.PI / 4; // 45 degrees in radians
+
+        // Function to calculate the angle between two vectors
+        const angleBetweenVectors = (v1x: number, v1y: number, v2x: number, v2y: number): number => {
+            const dotProduct = v1x * v2x + v1y * v2y;
+            const magnitudeV1 = Math.sqrt(v1x * v1x + v1y * v1y);
+            const magnitudeV2 = Math.sqrt(v2x * v2x + v2y * v2y);
+            return Math.acos(dotProduct / (magnitudeV1 * magnitudeV2));
+        };
+
+        // Keep extending in the direction of movement while walls are consecutive
+        for (let i = 0; i < MAX_TELEPORT_DISTANCE; i++) {
+            const nextWall = walls.find(wall => {
+                const withinX = (endX + offsetX * tankHalfSize) >= wall.x && (endX + offsetX * tankHalfSize) <= (wall.x + wall.width);
+                const withinY = (endY + offsetY * tankHalfSize) >= wall.y && (endY + offsetY * tankHalfSize) <= (wall.y + wall.height);
+                return withinX && withinY;
+            });
+
+            if (nextWall) {
+            const wallVector = { x: nextWall.x + nextWall.width / 2 - endX, y: nextWall.y + nextWall.height / 2 - endY };
+            const movementVector = { x: offsetX, y: offsetY };
+
+            const angleToWall = angleBetweenVectors(movementVector.x, movementVector.y, wallVector.x, wallVector.y);
+
+            if (angleToWall > MAX_TELEPORT_DEGREES) {
+                // console.log("[45] blocked",(angleToWall*(Math.PI/180)))
+                return null;
+            }
+
+                
+                group.push(nextWall);
+                // If a wall is found, extend the position further in that direction
+
+                if (isMovingRight) {
+                    endX = nextWall.x + nextWall.width + tankHalfSize;
+                } else if (isMovingLeft) {
+                    endX = nextWall.x - tankHalfSize;
+                } else if (isMovingDown) {
+                    endY = nextWall.y + nextWall.height + tankHalfSize;
+                } else if (isMovingUp) {
+                    endY = nextWall.y - tankHalfSize;
+                }
+
+            } else {
+                // Stop if no more consecutive walls are found
+                break;
+            }
+        }
+
+        // Ensure the final position is within the canvas bounds
+        if (endX < tankHalfSize || endX > (size.width - tankHalfSize) ||
+            endY < tankHalfSize || endY > (size.height - tankHalfSize)) {
+            return null;
+        }
+
+        return { x: endX, y: endY, group: group };
+    } 
+    
+        
+        
+    
+
+    move(walls: Wall[], size: GameSize, keys: { [key: string]: boolean }) {
+        if (!this.controls) return
+        const isMovingBackward = keys[this.controls.down];
+
+        const tankHalfSize = TANK_SIZE / 2;
+        
         const nextXadd = this.speed * Math.cos(this.angle);
         const nextYadd = this.speed * Math.sin(this.angle);
         let newX = this.x;
         let newY = this.y;
-
+        
+        let wallsUpdated: { wallIndex: number; color: string }[] = [];
+        
         if (keys[this.controls.up]) {
             newX += nextXadd;
             newY += nextYadd;
-        } else if (keys[this.controls.down]) {
+        } else if (isMovingBackward) {
             newX -= nextXadd;
             newY -= nextYadd;
         }
-
-        let wallsUpdated: { wallIndex: number; color: string }[] = [];
-
         if (!this.collides(newX, newY, walls)) {
-            this.x = Math.max(tankHalfSize, Math.min(newX, canvasWidth - tankHalfSize));
-            this.y = Math.max(tankHalfSize, Math.min(newY, canvasHeight - tankHalfSize));
+            // Move the tank normally if no collision
+            this.x = Math.max(tankHalfSize, Math.min(newX, size.width - tankHalfSize));
+            this.y = Math.max(tankHalfSize, Math.min(newY, size.height - tankHalfSize));
         } else {
-            walls.forEach(wall => {
-                const wallCenterX = wall.x + wall.width / 2;
-                const wallCenterY = wall.y + wall.height / 2;
+            // Tank hit a wall, now handling potential teleport or position adjustment
+            /*const wallHit = walls.find(wall=>(newX > wall.x && newX < wall.x + wall.width &&
+                newY > wall.y && newY < wall.y + wall.height))*/
+            // const direction = this.getDirection(keys)!;
 
-                if (newX > wall.x && newX < wall.x + wall.width &&
-                    newY > wall.y && newY < wall.y + wall.height) {
 
-                    if (wall.colorChangeTimeout) {
-                        clearTimeout(wall.colorChangeTimeout);
-                    }
-                    wall.currentColor = this.color;
 
-                    wall.colorChangeTimeout = setTimeout(() => {
-                        wall.currentColor = wall.originalColor;
-                    }, 300);
-                    wallsUpdated.push({ wallIndex: walls.indexOf(wall), color: this.color });
 
-                    if (Math.abs(newX - wallCenterX) > Math.abs(newY - wallCenterY)) {
-                        newX = newX < wallCenterX ? wall.x + wall.width + tankHalfSize : wall.x - tankHalfSize;
-                    } else {
-                        newY = newY < wallCenterY ? wall.y + wall.height + tankHalfSize : wall.y - tankHalfSize;
-                    }
+            const wallEnd = this.findGroupEnd(newX, newY, walls, size, isMovingBackward);
+            wallEnd?.group.forEach(wall => {
 
-                    this.x = Math.max(tankHalfSize, Math.min(newX, canvasWidth - tankHalfSize));
-                    this.y = Math.max(tankHalfSize, Math.min(newY, canvasHeight - tankHalfSize));
+
+
+                if (wall.colorChangeTimeout) {
+                    clearTimeout(wall.colorChangeTimeout);
                 }
+                wall.currentColor = this.color;
+
+                wall.colorChangeTimeout = setTimeout(() => {
+                    wall.currentColor = wall.originalColor;
+                }, 300);
+                wallsUpdated.push({ wallIndex: walls.indexOf(wall), color: this.color });
             });
+            if (wallEnd) {
+                this.teleport(wallEnd.x, wallEnd.y, walls, size);
+            } else {
+                this.teleport(newX, newY, walls, size);
+            }
+
+            // this.x = Math.max(tankHalfSize, Math.min(newX, size.width - tankHalfSize));
+            // this.y = Math.max(tankHalfSize, Math.min(newY, size.height - tankHalfSize));
+
+
         }
         return wallsUpdated
 
@@ -190,27 +322,31 @@ class Tank {
 
 
 
-    teleport(newX: number, newY: number, walls: Wall[], canvas: HTMLCanvasElement) {
+
+    private teleport(newX: number, newY: number, walls: Wall[], size: GameSize): boolean {
+        // Define boundaries based on canvas size and tank size
         const tankHalfSize = TANK_SIZE / 2;
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
 
-        walls.forEach(wall => {
-            const wallCenterX = wall.x + wall.width / 2;
-            const wallCenterY = wall.y + wall.height / 2;
+        // Check if the new position is within screen bounds
+        const isOutsideBounds = newX < tankHalfSize || newX > (size.width - tankHalfSize) ||
+            newY < tankHalfSize || newY > (size.height - tankHalfSize);
 
-            if (newX > wall.x && newX < wall.x + wall.width &&
-                newY > wall.y && newY < wall.y + wall.height) {
-                if (Math.abs(newX - wallCenterX) > Math.abs(newY - wallCenterY)) {
-                    newX = newX < wallCenterX ? wall.x + wall.width + tankHalfSize : wall.x - tankHalfSize;
-                } else {
-                    newY = newY < wallCenterY ? wall.y + wall.height + tankHalfSize : wall.y - tankHalfSize;
-                }
+        if (isOutsideBounds) {
+            console.log('Teleport blocked: out of bounds');
+            return false; // Prevent teleportation if out of bounds
+        }
 
-                this.x = Math.max(tankHalfSize, Math.min(newX, canvasWidth - tankHalfSize));
-                this.y = Math.max(tankHalfSize, Math.min(newY, canvasHeight - tankHalfSize));
-            }
-        });
+        // Check for collisions with walls at the new position
+        if (!this.collides(newX, newY, walls)) {
+            // If no collision, allow teleportation
+            this.x = newX;
+            this.y = newY;
+            // this.playTeleportAnimation();
+            return true;
+        } else {
+            console.log('Teleport blocked by wall');
+            return false;
+        }
     }
 
     rotate(dir: number) {
@@ -223,8 +359,8 @@ class Tank {
             if (this.ownBullets(bullets).length < this.maxBullets) {
                 const bullet: Bullet = {
                     id: uuidv4(),
-                    x: this.x + Math.cos(this.angle) * TANK_SIZE +2,
-                    y: this.y + Math.sin(this.angle) * TANK_SIZE +2,
+                    x: this.x + Math.cos(this.angle) * TANK_SIZE + 2,
+                    y: this.y + Math.sin(this.angle) * TANK_SIZE + 2,
                     dx: Math.cos(this.angle) * 5,
                     dy: Math.sin(this.angle) * 5,
                     creationTime: now,
@@ -232,7 +368,7 @@ class Tank {
                     owner: this.peerId
                 };
                 bullets.push(bullet);
-                
+
                 this.lastShotTime = now;
                 return bullet
             }
@@ -249,56 +385,56 @@ class Tank {
             { x: this.x + halfSize, y: this.y + halfSize },
             { x: this.x - halfSize, y: this.y + halfSize }
         ];
-    
+
         // Rotate the corners around the center of the tank
         const rotatedCorners = corners.map(corner => this.rotatePoint(corner, { x: this.x, y: this.y }, this.angle));
-    
+
         // Check if the bullet is within the rotated rectangle using SAT (Separating Axis Theorem)
         return this.pointInRotatedRectangle(bullet.x, bullet.y, rotatedCorners);
     }
-    
+
     // Rotate a point around a given center by a certain angle
     rotatePoint(point: { x: number, y: number }, center: { x: number, y: number }, angle: number): { x: number, y: number } {
         const cosTheta = Math.cos(angle);
         const sinTheta = Math.sin(angle);
-    
+
         const dx = point.x - center.x;
         const dy = point.y - center.y;
-    
+
         return {
             x: cosTheta * dx - sinTheta * dy + center.x,
             y: sinTheta * dx + cosTheta * dy + center.y
         };
     }
-    
+
     // Check if a point (e.g., bullet) is inside a rotated rectangle using SAT
     pointInRotatedRectangle(px: number, py: number, corners: { x: number, y: number }[]): boolean {
         // Function to calculate the dot product of two vectors
         const dotProduct = (v1: { x: number, y: number }, v2: { x: number, y: number }) => v1.x * v2.x + v1.y * v2.y;
-    
+
         // Function to subtract two points to create a vector
         const subtract = (p1: { x: number, y: number }, p2: { x: number, y: number }) => ({ x: p1.x - p2.x, y: p1.y - p2.y });
-    
+
         // Create axes (normals) for the rectangle edges
         const axes = [
             subtract(corners[1], corners[0]), // Edge between corner 0 and corner 1
             subtract(corners[3], corners[0])  // Edge between corner 0 and corner 3
         ];
-    
+
         // For each axis, project the point and rectangle corners, and check for overlap
         for (let axis of axes) {
             const projections = corners.map(corner => dotProduct(corner, axis));
             const minRectProj = Math.min(...projections);
             const maxRectProj = Math.max(...projections);
-    
+
             const bulletProj = dotProduct({ x: px, y: py }, axis);
-    
+
             if (bulletProj < minRectProj || bulletProj > maxRectProj) {
                 // No overlap on this axis, so no collision
                 return false;
             }
         }
-    
+
         // Overlaps on both axes, so there is a collision
         return true;
     }
@@ -312,17 +448,19 @@ class Tank {
 }
 function uuidv4() { // overkill- so:105034
     return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
-      (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+        (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
     );
-  }
+}
 
 class Game {
-    private canvas: HTMLCanvasElement;
+    // private canvas: HTMLCanvasElement;
+    private gameSize: GameSize;
     private ctx: CanvasRenderingContext2D;
     private localTank: Tank;
     private remoteTanks: Tank[];
     private bullets: Bullet[];
     private walls: Wall[];
+    // private groupedWalls: Wall[];
     private keys: { [key: string]: boolean };
     private gameOver: boolean;
     private winMessage: string;
@@ -334,17 +472,20 @@ class Game {
     private static PING_ALLOWED_MISSES = PING_ALLOWED_MISSES;
 
     constructor(canvasId: string, roomId: string) {
-        this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-        this.canvas.style.visibility = "visible";
+        const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+        canvas.style.visibility = "visible";
 
-        this.ctx = this.canvas.getContext('2d')!;
+        this.ctx = canvas.getContext('2d')!;
 
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // FIXME : find better way to do screen sizing.
+
+        this.gameSize = { height: canvas.height, width: canvas.width }
 
         this.localTank = new Tank(
-            this.canvas.width / 2,
-            this.canvas.height / 2,
+            this.gameSize.width / 2,
+            this.gameSize.height / 2,
             'blue',
             {
                 up: 'ArrowUp',
@@ -428,9 +569,6 @@ class Game {
 
 
     private sendAction(action: Action, peerId?: string) {
-        // Replace with the actual method from Trystero
-        // if (!this.Actions) { this.Error("cannot send action [no sendAction]", action); return }
-        // console.log('Sending action:', action);
         this.Actions.send(action, peerId)
     }
 
@@ -441,7 +579,7 @@ class Game {
     private handleAction(data: Action, peerId: string) {
         switch (data.type) {
             case 'move':
-                if (data.x===undefined || data.y===undefined || data.angle===undefined) { return }
+                if (data.x === undefined || data.y === undefined || data.angle === undefined) { return }
 
                 let tank = this.remoteTanks.find(t => t.peerId === peerId);
                 if (!tank) {
@@ -469,13 +607,12 @@ class Game {
                 const updatedBullet = data.bullet!;
                 const existingBullet = this.bullets.find(b => b.id === updatedBullet.id);
                 if (existingBullet) {
-                    console.log("update bullet")
                     Object.assign(existingBullet, updatedBullet);
                 }
                 break;
 
             case 'maze':
-                this.walls = data.maze!;
+                this.setWalls(data.maze!);
                 this.drawWalls();
                 break;
 
@@ -518,15 +655,15 @@ class Game {
 
     private generateMaze(): Wall[] {
         const maze: Wall[] = [];
-        const mazeWidth = this.canvas.width / (WALL_SIZE + WALL_SPACING);
-        const mazeHeight = this.canvas.height / (WALL_SIZE + WALL_SPACING);
+        const mazeWidth = this.gameSize.width / (WALL_SIZE);
+        const mazeHeight = this.gameSize.height / (WALL_SIZE);
 
         for (let i = 0; i < mazeWidth; i++) {
             for (let j = 0; j < mazeHeight; j++) {
                 if (Math.random() < 0.3) {
                     maze.push({
-                        x: i * (WALL_SIZE + WALL_SPACING),
-                        y: j * (WALL_SIZE + WALL_SPACING),
+                        x: i * (WALL_SIZE),
+                        y: j * (WALL_SIZE),
                         width: WALL_SIZE,
                         height: WALL_SIZE,
                         originalColor: 'gray'
@@ -538,11 +675,13 @@ class Game {
         return maze;
     }
 
+
     private drawWalls() {
         this.ctx.fillStyle = 'gray'; // Default color
+        // Visual spacing of 0.2 between walls
         this.walls.forEach(wall => {
             this.ctx.fillStyle = wall.currentColor || wall.originalColor;
-            this.ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            this.ctx.fillRect(wall.x, wall.y, wall.width - WALL_VSPACING, wall.height - WALL_VSPACING);
         });
     }
 
@@ -557,8 +696,9 @@ class Game {
             this.ctx.restore();
         });
     }
-    
+
     private checkCollisions() {
+
         this.bullets.forEach(bullet => {
 
             if (this.localTank.checkCollisionWithBullet(bullet)) {
@@ -591,42 +731,45 @@ class Game {
         if (this.gameOver) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent background
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // Fill the entire canvas with background color
+            this.ctx.fillRect(0, 0, this.gameSize.width, this.gameSize.height); // Fill the entire canvas with background color
 
             this.ctx.font = '48px Arial';
             this.ctx.fillStyle = 'white'; // Text color
             const text = this.winMessage;
             const textWidth = this.ctx.measureText(text).width;
-            this.ctx.fillText(text, this.canvas.width / 2 - textWidth / 2, this.canvas.height / 2);
+            this.ctx.fillText(text, this.gameSize.width / 2 - textWidth / 2, this.gameSize.height / 2);
 
             this.ctx.restore();
         }
     }
 
+
+
     private startNewGame() {
         // Reset game state
         this.gameOver = false;
         this.winMessage = '';
-        this.walls = [];
+        this.setWalls([]);
         this.bullets = [];
-        this.localTank.x = this.canvas.width / 2;
-        this.localTank.y = this.canvas.height / 2;
+        this.localTank.x = this.gameSize.width / 2;
+        this.localTank.y = this.gameSize.height / 2;
 
         const waitingForPid = [...this.remoteTanks, this.localTank].sort((a, b) => a.originalcreationTime - b.originalcreationTime)[0].peerId;
         if (waitingForPid === selfId) {
             const newMaze = this.generateMaze();
-            this.walls.push(...newMaze);
+            this.setWalls(newMaze);
             console.log('Attempt to start a new game\nRemote:', [...this.remoteTanks.map(tank => tank.originalcreationTime), this.localTank.originalcreationTime].sort(), selfId);
             this.sendAction({ type: 'maze', maze: newMaze });
             this.sendAction({ type: 'newGame' });
         } else {
             console.log('Waiting for PID', waitingForPid);
+            // TODO: handle the case it errors.
         }
 
         const localTankPosition = this.getRandomPositionOutsideMaze();
         this.localTank.x = localTankPosition.x;
         this.localTank.y = localTankPosition.y;
-        
+
 
         // Restart game loop
         this.gameLoop();
@@ -639,7 +782,7 @@ class Game {
 
     private getRandomPositionOutsideMaze(): { x: number, y: number } {
         // Implement logic to find a random position outside of the maze
-        return { x: Math.random() * this.canvas.width, y: Math.random() * this.canvas.height };
+        return { x: Math.random() * this.gameSize.width, y: Math.random() * this.gameSize.height };
     }
     sendPing() {
         this.sendAction({ type: 'ping' });
@@ -652,8 +795,8 @@ class Game {
             bullet.y += bullet.dy;
             // bullet.alpha -= 0.01;
             // Reflect bullets on screen edges
-            if (bullet.x <= 0 || bullet.x >= this.canvas.width) bullet.dx *= -1;
-            if (bullet.y <= 0 || bullet.y >= this.canvas.height) bullet.dy *= -1;
+            if (bullet.x <= 0 || bullet.x >= this.gameSize.width) bullet.dx *= -1;
+            if (bullet.y <= 0 || bullet.y >= this.gameSize.height) bullet.dy *= -1;
             // Bullet's bounding box
             const bulletLeft = bullet.x - BULLET_SIZE / 2;
             const bulletRight = bullet.x + BULLET_SIZE / 2;
@@ -718,8 +861,12 @@ class Game {
         this.bullets = this.bullets.filter(bullet => bullet.alpha > 0.5);
 
     }
+    private setWalls(walls: Wall[]) {
+        this.walls = walls;
+        // this.groupedWalls = groupWallsForTeleport(walls);
+    }
     private localmove() {
-        let wallsUpdated = this.localTank.move(this.walls, this.canvas, this.keys);
+        let wallsUpdated = this.localTank.move(this.walls, this.gameSize, this.keys);
         if (wallsUpdated && wallsUpdated.length > 0) {
             this.sendAction({ type: "wallColorChange", wallsUpdated })
         }
@@ -737,7 +884,7 @@ class Game {
             return;
         }
 
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.clearRect(0, 0, this.gameSize.width, this.gameSize.height);
 
         // Update local tank and bullets
         if (!this.gameOver) {

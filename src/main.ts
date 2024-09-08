@@ -39,7 +39,7 @@ type TankControls = {
 };
 
 
-type ActionType = 'move' | 'shoot' | 'updateBullet' | 'maze' | 'wallColorChange' | 'newGame' | 'gameOver' | 'ping';
+type ActionType = 'move' | 'shoot' | 'updateBullet' | 'maze' | 'wallColorChange' | 'newGame' | 'gameOver' | 'ping'|'ackMaze';
 // TODO: split into types/actions
 type Action = {
     type: ActionType;
@@ -172,7 +172,7 @@ class Tank {
     private findGroupEnd(startX: number, startY: number, walls: Wall[], size: GameSize, isMovingBackward: boolean): { x: number; y: number, group: Wall[] } | null {
         const group: Wall[] = [];
 
-        const tankHalfSize = TANK_SIZE / 2;
+        const tankMinSize = TANK_SIZE / 16;
         let endX = startX;
         let endY = startY;
 
@@ -208,8 +208,8 @@ class Tank {
         // Keep extending in the direction of movement while walls are consecutive
         for (let i = 0; i < MAX_TELEPORT_DISTANCE; i++) {
             const nextWall = walls.find(wall => {
-                const withinX = (endX + offsetX * tankHalfSize) >= wall.x && (endX + offsetX * tankHalfSize) <= (wall.x + wall.width);
-                const withinY = (endY + offsetY * tankHalfSize) >= wall.y && (endY + offsetY * tankHalfSize) <= (wall.y + wall.height);
+                const withinX = (endX + offsetX * tankMinSize) >= wall.x && (endX + offsetX * tankMinSize) <= (wall.x + wall.width);
+                const withinY = (endY + offsetY * tankMinSize) >= wall.y && (endY + offsetY * tankMinSize) <= (wall.y + wall.height);
                 return withinX && withinY;
             });
 
@@ -220,7 +220,7 @@ class Tank {
             const angleToWall = angleBetweenVectors(movementVector.x, movementVector.y, wallVector.x, wallVector.y);
 
             if (angleToWall > MAX_TELEPORT_DEGREES) {
-                // console.log("[45] blocked",(angleToWall*(Math.PI/180)))
+                console.log("[45] blocked",(angleToWall*(Math.PI/180)))
                 return null;
             }
 
@@ -229,13 +229,13 @@ class Tank {
                 // If a wall is found, extend the position further in that direction
 
                 if (isMovingRight) {
-                    endX = nextWall.x + nextWall.width + tankHalfSize;
+                    endX = nextWall.x + nextWall.width + tankMinSize;
                 } else if (isMovingLeft) {
-                    endX = nextWall.x - tankHalfSize;
+                    endX = nextWall.x - tankMinSize;
                 } else if (isMovingDown) {
-                    endY = nextWall.y + nextWall.height + tankHalfSize;
+                    endY = nextWall.y + nextWall.height + tankMinSize;
                 } else if (isMovingUp) {
-                    endY = nextWall.y - tankHalfSize;
+                    endY = nextWall.y - tankMinSize;
                 }
 
             } else {
@@ -245,8 +245,8 @@ class Tank {
         }
 
         // Ensure the final position is within the canvas bounds
-        if (endX < tankHalfSize || endX > (size.width - tankHalfSize) ||
-            endY < tankHalfSize || endY > (size.height - tankHalfSize)) {
+        if (endX < tankMinSize || endX > (size.width - tankMinSize) ||
+            endY < tankMinSize || endY > (size.height - tankMinSize)) {
             return null;
         }
 
@@ -282,13 +282,7 @@ class Tank {
             this.x = Math.max(tankHalfSize, Math.min(newX, size.width - tankHalfSize));
             this.y = Math.max(tankHalfSize, Math.min(newY, size.height - tankHalfSize));
         } else {
-            // Tank hit a wall, now handling potential teleport or position adjustment
-            /*const wallHit = walls.find(wall=>(newX > wall.x && newX < wall.x + wall.width &&
-                newY > wall.y && newY < wall.y + wall.height))*/
-            // const direction = this.getDirection(keys)!;
-
-
-
+            const alreadyCollides = this.collides(this.x,this.y,walls);
 
             const wallEnd = this.findGroupEnd(newX, newY, walls, size, isMovingBackward);
             wallEnd?.group.forEach(wall => {
@@ -306,14 +300,9 @@ class Tank {
                 wallsUpdated.push({ wallIndex: walls.indexOf(wall), color: this.color });
             });
             if (wallEnd) {
-                this.teleport(wallEnd.x, wallEnd.y, walls, size);
-            } else {
-                this.teleport(newX, newY, walls, size);
-            }
-
-            // this.x = Math.max(tankHalfSize, Math.min(newX, size.width - tankHalfSize));
-            // this.y = Math.max(tankHalfSize, Math.min(newY, size.height - tankHalfSize));
-
+                if (alreadyCollides){this.x =wallEnd.x;this.y = wallEnd.y }
+                else this.teleport(wallEnd.x, wallEnd.y, walls, size);
+            } 
 
         }
         return wallsUpdated
@@ -341,7 +330,6 @@ class Tank {
             // If no collision, allow teleportation
             this.x = newX;
             this.y = newY;
-            // this.playTeleportAnimation();
             return true;
         } else {
             console.log('Teleport blocked by wall');
@@ -615,6 +603,9 @@ class Game {
                 this.setWalls(data.maze!);
                 this.drawWalls();
                 break;
+            case 'ackMaze':
+                this.sendAction({ type: 'maze', maze: this.walls },peerId);
+                break
 
             case 'wallColorChange':
                 const wallsUpdated = data.wallsUpdated!;
@@ -888,11 +879,13 @@ class Game {
 
         // Update local tank and bullets
         if (!this.gameOver) {
+            // if (this.walls.length===0) this.sendAction({ type: 'ackMaze' });   
             let shoot_bullet = this.localTank.update_controls(this.keys, this.bullets);
             if (shoot_bullet) this.sendAction({ type: 'shoot', bullet: shoot_bullet });
             this.localmove()
-
-
+        }
+        else{
+            this.walls = [];
         }
         this.updateBullets();
 

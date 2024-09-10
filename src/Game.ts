@@ -168,7 +168,7 @@ export class Game {
         }
     }
 
-    private handleShootAction(data: ShootAction, peerId: string) {
+    private handleShootAction(_data: ShootAction, peerId: string) {
         const tank = this.remoteTanks.find(t => t.peerId === peerId);
         if (!tank) return
 
@@ -258,8 +258,9 @@ export class Game {
 
         // Update local tank and bullets
         if (this.maze) {
-            const shootBullet = this.localTank.updateControls(this.keys, this.bullets, this.maze!.walls, this.gameSize);
+            const {shootBullet,wallsUpdated} = this.localTank.updateControls(this.keys, this.bullets, this.maze!.walls, this.gameSize);
             if (shootBullet) this.sendAction({ type: ActionTypes.SHOOT, });
+            if (wallsUpdated) this.sendAction({type:ActionTypes.WALL_COLOR_CHANGE,wallsUpdated:wallsUpdated})
         }
 
         this.updateBullets();
@@ -275,7 +276,7 @@ export class Game {
         this.localTank.draw(this.ctx);
         this.remoteTanks.forEach(tank => tank.draw(this.ctx));
         this.drawBullets();
-        // this.checkCollisions();
+        this.checkCollisions();
         this.checkInactiveTanks();
 
         requestAnimationFrame(() => this.gameLoop());
@@ -309,8 +310,19 @@ export class Game {
     private checkCollisions() {
         // Check collisions with walls and other game elements
         this.bullets.forEach(bullet => {
-            if (bullet.x < 0 || bullet.x > this.gameSize.width || bullet.y < 0 || bullet.y > this.gameSize.height) {
-                bullet.alpha = 0; // Bullet is out of bounds
+
+            if (this.localTank.checkCollisionWithBullet(bullet)) {
+                this.gameOver = true;
+                this.winMessage = 'Game over!';
+                this.sendAction({ type: ActionTypes.GAME_OVER, message: 'You win' });
+            } else {
+                this.remoteTanks.forEach(tank => {
+                    if (tank.checkCollisionWithBullet(bullet)) {
+                        this.gameOver = true;
+                        this.winMessage = 'You Win!';
+                        this.sendAction({ type: ActionTypes.GAME_OVER, message: 'Game Over' });
+                    }
+                });
             }
         });
     }
@@ -334,6 +346,6 @@ export class Game {
         this.localTank.x = Math.random() * this.gameSize.width;
         this.localTank.y = Math.random() * this.gameSize.height;
 
-        this.localTank.moveOut(this.maze?.walls || [])
+        this.localTank.moveOut(this.maze?.walls || [],this.gameSize)
     }
 }

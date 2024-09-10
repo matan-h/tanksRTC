@@ -37,6 +37,13 @@ export function rotatePoint(point: { x: number, y: number }, center: { x: number
     };
 }
 
+export function isPointInTriangle(px: number, py: number, v1: { x: number, y: number }, v2: { x: number, y: number }, v3: { x: number, y: number }): boolean {
+    const area = (v1.x * (v2.y - v3.y) + v2.x * (v3.y - v1.y) + v3.x * (v1.y - v2.y)) / 2;
+    const s = 1 / (2 * area) * (v1.x * (v2.y - py) + v2.x * (py - v1.y) + px * (v1.y - v2.y));
+    const t = 1 / (2 * area) * (v1.x * (py - v3.y) + px * (v3.y - v1.y) + v3.x * (v1.y - py));
+    return s >= 0 && t >= 0 && (s + t) <= 1;
+}
+
 // Check if a point (e.g., bullet) is inside a rotated rectangle using SAT
 export function pointInRotatedRectangle(px: number, py: number, corners: { x: number, y: number }[]): boolean {
     // Function to calculate the dot product of two vectors
@@ -140,12 +147,12 @@ export function findGroupEnd(angle:number,startX: number, startY: number, walls:
     // const degrees45 = Math.PI / 4; // 45 degrees in radians
 
     // Function to calculate the angle between two vectors
-    const angleBetweenVectors = (v1x: number, v1y: number, v2x: number, v2y: number): number => {
+    /*const angleBetweenVectors = (v1x: number, v1y: number, v2x: number, v2y: number): number => {
         const dotProduct = v1x * v2x + v1y * v2y;
         const magnitudeV1 = Math.sqrt(v1x * v1x + v1y * v1y);
         const magnitudeV2 = Math.sqrt(v2x * v2x + v2y * v2y);
         return Math.acos(dotProduct / (magnitudeV1 * magnitudeV2));
-    };
+    };*/
 
     // Keep extending in the direction of movement while walls are consecutive
     for (let i = 0; i < Constants.MAX_TELEPORT_DISTANCE; i++) {
@@ -156,15 +163,16 @@ export function findGroupEnd(angle:number,startX: number, startY: number, walls:
         });
 
         if (nextWall) {
-        const wallVector = { x: nextWall.x + nextWall.width / 2 - endX, y: nextWall.y + nextWall.height / 2 - endY };
+        /*const wallVector = { x: nextWall.x + nextWall.width / 2 - endX, y: nextWall.y + nextWall.height / 2 - endY };
         const movementVector = { x: offsetX, y: offsetY };
 
-        const angleToWall = angleBetweenVectors(movementVector.x, movementVector.y, wallVector.x, wallVector.y);
+        const _angleToWall = angleBetweenVectors(movementVector.x, movementVector.y, wallVector.x, wallVector.y);
+        */
 
-        if (angleToWall > Constants.MAX_TELEPORT_DEGREES) {
-            console.log("[45] blocked",(angleToWall*(Math.PI/180)))
-            return null;
-        }
+        // if (angleToWall > Constants.MAX_TELEPORT_DEGREES) {
+        //     console.log("[45] blocked",(angleToWall*(Math.PI/180)))
+        //     return null;
+        // }
 
             
             group.push(nextWall);

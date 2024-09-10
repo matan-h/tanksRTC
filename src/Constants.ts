@@ -9,16 +9,17 @@ export const Constants = {
     GAME_HEIGHT: 600,
 
     // Tank properties
-    TANK_SPEED: 5,
+    TANK_SPEED: 3,
     TANK_ROTATION_SPEED: 0.1,
     TANK_SIZE: 40,
+    TURRET_SIZE:20,
     TANK_BULLETS_MAX: 10,
     SHOOT_COOLDOWN: 200,//ms
 
     // Bullet properties
     BULLET_SPEED: 5,
     BULLET_SIZE: 10,
-    BULLET_LIFE: 2.7, // seconds
+    BULLET_LIFE: 6.7, // seconds
     BULLET_FADE_START: 2, // seconds
 
     // Wall properties

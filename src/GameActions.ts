@@ -39,7 +39,7 @@ export interface MazeAction extends BaseAction {
 
 export interface WallColorChangeAction extends BaseAction {
     type: ActionTypes.WALL_COLOR_CHANGE;
-    wallsUpdated: { wallIndex: number; color: string }[];
+    wallsUpdated: { wallIndex: number; }[];
 }
 
 export interface NewGameAction extends BaseAction {

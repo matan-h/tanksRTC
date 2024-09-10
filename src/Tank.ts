@@ -66,7 +66,6 @@ export class Tank {
 
         if (!this.WallCollides(newX, newY, walls) || this.WallCollides(this.x, this.y, walls)) {
             console.log('move normally')
-            const tankHalfSize = Constants.TANK_SIZE / 2;
             // Move the tank normally if no collision
             if (!this.isOutOfBounds(newX,newY,angle,size)){
                 console.log("!OOB")

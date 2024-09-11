@@ -52,6 +52,12 @@ export class Game {
 
         this.room = this.joinRoom(roomId);
         this.actions = this.createActions();
+        // debug info:
+        if (location.hostname === 'localhost') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (window as any).dbg = { localTank: this.localTank, remoteTanks: this.remoteTanks, maze: this.maze,game:this }
+        }
+
 
         this.setupEventListeners();
         this.startNewGame();
@@ -258,9 +264,9 @@ export class Game {
 
         // Update local tank and bullets
         if (this.maze) {
-            const {shootBullet,wallsUpdated} = this.localTank.updateControls(this.keys, this.bullets, this.maze!.walls, this.gameSize);
+            const { shootBullet, wallsUpdated } = this.localTank.updateControls(this.keys, this.bullets, this.maze!.walls, this.gameSize);
             if (shootBullet) this.sendAction({ type: ActionTypes.SHOOT, });
-            if (wallsUpdated) this.sendAction({type:ActionTypes.WALL_COLOR_CHANGE,wallsUpdated:wallsUpdated})
+            if (wallsUpdated) this.sendAction({ type: ActionTypes.WALL_COLOR_CHANGE, wallsUpdated: wallsUpdated })
         }
 
         this.updateBullets();
@@ -346,6 +352,6 @@ export class Game {
         this.localTank.x = Math.random() * this.gameSize.width;
         this.localTank.y = Math.random() * this.gameSize.height;
 
-        this.localTank.moveOut(this.maze?.walls || [],this.gameSize)
+        this.localTank.moveOut(this.maze?.walls || [], this.gameSize)
     }
 }

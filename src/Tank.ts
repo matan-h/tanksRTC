@@ -55,32 +55,33 @@ export class Tank {
             shootBullet = this.shoot(bullets) || null;
         }
         // Movement logic
-        const {newX, newY} = this.move(keys);
-        let angle =this.angle;
+        const { newX, newY } = this.move(keys);
+        let angle = this.angle;
         if (keys[this.controls!.left]) {
             angle -= 0.1; // Rotate left
         }
         if (keys[this.controls!.right]) {
             angle += 0.1; // Rotate right
         }
+        const OOB = this.howOutOfBounds(newX, newY, angle, size)
 
         if (!this.WallCollides(newX, newY, walls) || this.WallCollides(this.x, this.y, walls)) {
-            console.log('move normally')
             // Move the tank normally if no collision
-            if (!this.isOutOfBounds(newX,newY,angle,size)){
-                console.log("!OOB")
+            if (!OOB.isOut) {
 
-            this.angle = angle
-            this.x = newX
-            this.y = newY
-        }
-        else if (!this.isOutOfBounds(this.x,this.y,angle,size)){
+                this.angle = angle
+                this.x = newX
+                this.y = newY
+            }
+            else{
+                this.x = OOB.outPos.x
+                this.y = OOB.outPos.y
                 this.angle = angle
 
             }
+
         }
         else {
-            console.log('teleport')
             this.angle = angle
             const wallEnd = findGroupEnd(this.angle, newX, newY, walls, size, keys[this.controls!.down]);
             if (wallEnd) {
@@ -103,6 +104,13 @@ export class Tank {
     moveOut(walls: Wall[], size: GameSize) {
         const alreadyCollides = this.WallCollides(this.x, this.y, walls);
         if (!alreadyCollides) return;
+        const OOB = this.howOutOfBounds(this.x, this.y, this.angle, size);
+
+        if (OOB.isOut) {
+            this.x = OOB.outPos.x
+            this.y = OOB.outPos.y
+
+        }
         const wallEnd = findGroupEnd(this.angle, this.x, this.y, walls, size, true);
         if (wallEnd) {
             this.x = wallEnd.x
@@ -146,35 +154,68 @@ export class Tank {
             newY -= Math.sin(this.angle) * speed;
         }
 
-        return {newX, newY}
+        return { newX, newY }
     }
-    private isOutOfBounds(newX:number,newY:number,angle:number,size:GameSize) {
+    private howOutOfBounds(newX: number, newY: number, angle: number, size: GameSize): { outPos: { x: number, y: number }, isOut: boolean } {
         const tankHalfSize = Constants.TANK_SIZE / 2;
+    const turretOffset = 20; // Turret length or offset from the tank center
 
-        // Calculate the bounds of the rectangular body
-        const rectLeft = newX - tankHalfSize;
-        const rectRight = newX + tankHalfSize;
-        const rectTop = newY - tankHalfSize;
-        const rectBottom = newY + tankHalfSize;
+    // Calculate the bounds of the rectangular body
+    const rectLeft = newX - tankHalfSize;
+    const rectRight = newX + tankHalfSize;
+    const rectTop = newY - tankHalfSize;
+    const rectBottom = newY + tankHalfSize;
 
-        // Check if the rectangle is within the world boundaries
-        const outOfBoundsRectangle = rectLeft < 0 || rectRight > size.width || rectTop < 0 || rectBottom > size.height;
+    // Calculate the turret's triangular vertices
+    const turretVertices = [
+        { x: newX + tankHalfSize, y: newY + tankHalfSize },
+        { x: newX + tankHalfSize, y: newY - tankHalfSize },
+        { x: newX + tankHalfSize + turretOffset, y: newY }
+    ].map(vertex => rotatePoint(vertex, { x: newX, y: newY }, angle));
 
-        // Calculate the turret's triangular vertices
-        const turretVertices = [
-            { x: newX + tankHalfSize, y: newY + tankHalfSize },
-            { x: newX + tankHalfSize, y: newY - tankHalfSize },
-            { x: newX + tankHalfSize + 20, y: newY }
-        ].map(vertex => rotatePoint(vertex, { x: newX, y: newY }, angle));
+    // Initialize the adjustments to zero
+    let adjustX = 0;
+    let adjustY = 0;
 
-        // Check if any turret vertex is out of bounds
-        const outOfBoundsTurret = turretVertices.some(vertex =>
-            vertex.x < 0 || vertex.x > size.width || vertex.y < 0 || vertex.y > size.height
-        );
+    // Calculate the required adjustments for the rectangular body
+    if (rectLeft < 0) {
+        adjustX = Math.max(adjustX, -rectLeft);
+    } else if (rectRight > size.width) {
+        adjustX = Math.min(adjustX, size.width - rectRight);
+    }
 
-        return outOfBoundsRectangle || outOfBoundsTurret;
+    if (rectTop < 0) {
+        adjustY = Math.max(adjustY, -rectTop);
+    } else if (rectBottom > size.height) {
+        adjustY = Math.min(adjustY, size.height - rectBottom);
+    }
+
+    // Calculate the required adjustments for the turret vertices
+    turretVertices.forEach(vertex => {
+        if (vertex.x < 0) {
+            adjustX = Math.max(adjustX, -vertex.x);
+        } else if (vertex.x > size.width) {
+            adjustX = Math.min(adjustX, size.width - vertex.x);
+        }
+
+        if (vertex.y < 0) {
+            adjustY = Math.max(adjustY, -vertex.y);
+        } else if (vertex.y > size.height) {
+            adjustY = Math.min(adjustY, size.height - vertex.y);
+        }
+    });
+
+    // Calculate the final position
+    const retX = newX + adjustX;
+    const retY = newY + adjustY;
+
+    // Determine if the tank is out of bounds
+    const isOut = adjustX !== 0 || adjustY !== 0;
+
+    return { outPos: { x: retX, y: retY }, isOut };
 
     }
+
 
     draw(ctx: CanvasRenderingContext2D) {
         ctx.save();

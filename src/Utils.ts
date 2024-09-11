@@ -207,6 +207,56 @@ export function dummyrandom(seed:number) { // so/a:19303725 : This isn't a unifo
     return x - Math.floor(x);
 }
 /**
+ * Group adjacent or connected walls into clusters for treating them as single surfaces.
+ * @param walls List of individual walls.
+ * @returns Array of wall clusters (each cluster is an array of walls).
+ */
+export function groupWallClusters(walls: Wall[]): Wall[][] {
+    const clusters: Wall[][] = [];
+    
+    // A basic approach to clustering walls based on adjacency or proximity
+    walls.forEach(wall => {
+        let addedToCluster = false;
+        
+        // Check if the wall can be grouped with any existing cluster
+        clusters.forEach(cluster => {
+            cluster.forEach(clusterWall => {
+                if (areWallsAdjacent(wall, clusterWall)) {
+                    cluster.push(wall);
+                    addedToCluster = true;
+                }
+            });
+        });
+
+        // If no cluster was found, create a new cluster for this wall
+        if (!addedToCluster) {
+            clusters.push([wall]);
+        }
+    });
+
+    return clusters;
+}
+
+/**
+ * Checks if two walls are adjacent or close enough to be treated as part of the same cluster.
+ * @param wall1 First wall.
+ * @param wall2 Second wall.
+ * @returns True if walls are adjacent or close.
+ */
+function areWallsAdjacent(wall1: Wall, wall2: Wall): boolean {
+    const proximityThreshold = 5; // Define how close the walls need to be to cluster
+
+    // Check if walls are next to each other or very close in any direction
+    return (
+        (Math.abs(wall1.x + wall1.width - wall2.x) < proximityThreshold) ||  // wall1 is to the left of wall2
+        (Math.abs(wall2.x + wall2.width - wall1.x) < proximityThreshold) ||  // wall2 is to the left of wall1
+        (Math.abs(wall1.y + wall1.height - wall2.y) < proximityThreshold) || // wall1 is above wall2
+        (Math.abs(wall2.y + wall2.height - wall1.y) < proximityThreshold)    // wall2 is above wall1
+    );
+}
+
+
+/**
  * Utility function to generate a random maze based on a given width and height.
  * 
  * @param width - The width of the maze in pixels.

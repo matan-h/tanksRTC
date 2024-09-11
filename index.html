@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Tank Game</title>
-    <link rel="stylesheet" href="src/style.css">
+    <link rel="stylesheet" href="src/css/style.css">
 
 </head>
 
@@ -13,8 +13,9 @@
     <form id="roomIdForm">
         <label for="roomId">Enter Room Name:</label>
         <input type="text" id="roomId" name="roomId" placeholder="public" autofocus autocomplete="off" />
-        <button type="submit">Join Room</button>
+        <button id="roomIdButton" autocomplete="off" type="submit" disabled>Join Room</button>
     </form>
+    </div>
     <canvas style="visibility: hidden;" id="gameCanvas"></canvas>
     <script type="module" src="src/init.ts"></script>
 </body>

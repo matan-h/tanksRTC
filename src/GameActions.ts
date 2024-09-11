@@ -11,6 +11,7 @@ export enum ActionTypes {
     WALL_COLOR_CHANGE = 'wallColorChange',
     NEW_GAME = 'newGame',
     GAME_OVER = 'gameOver',
+    Eliminated = 'eliminated',
     PING = 'ping'
 }
 
@@ -48,7 +49,11 @@ export interface NewGameAction extends BaseAction {
 
 export interface GameOverAction extends BaseAction {
     type: ActionTypes.GAME_OVER;
-    message: string;
+    winner: string;
+}
+export interface EliminatedAction extends BaseAction{
+    type:ActionTypes.Eliminated;
+    bullet_id:number
 }
 
 export interface PingAction extends BaseAction {
@@ -62,7 +67,7 @@ export type Action =
     | WallColorChangeAction
     | NewGameAction
     | GameOverAction
-    | PingAction;
+    | PingAction| EliminatedAction;
 
 // Define the interface for action methods
 export interface ActionMethods {

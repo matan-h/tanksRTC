@@ -1,7 +1,7 @@
 // Utils.ts
 
 import { Constants } from "./Constants";
-import { GameSize, Wall } from "./Types";
+import { GameSize, Point, Wall } from "./Types";
 
 /**
  * Generates a UUID v4.
@@ -24,7 +24,7 @@ export function isPointInRect(x: number, y: number, rect: { x: number, y: number
     return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
 }
 // Rotate a point around a given center by a certain angle
-export function rotatePoint(point: { x: number, y: number }, center: { x: number, y: number }, angle: number): { x: number, y: number } {
+export function rotatePoint(point: Point, center: Point, angle: number): Point {
     const cosTheta = Math.cos(angle);
     const sinTheta = Math.sin(angle);
 
@@ -37,7 +37,7 @@ export function rotatePoint(point: { x: number, y: number }, center: { x: number
     };
 }
 
-export function isPointInTriangle(px: number, py: number, v1: { x: number, y: number }, v2: { x: number, y: number }, v3: { x: number, y: number }): boolean {
+export function isPointInTriangle(px: number, py: number, v1: Point, v2: Point, v3: Point): boolean {
     const area = (v1.x * (v2.y - v3.y) + v2.x * (v3.y - v1.y) + v3.x * (v1.y - v2.y)) / 2;
     const s = 1 / (2 * area) * (v1.x * (v2.y - py) + v2.x * (py - v1.y) + px * (v1.y - v2.y));
     const t = 1 / (2 * area) * (v1.x * (py - v3.y) + px * (v3.y - v1.y) + v3.x * (v1.y - py));
@@ -45,12 +45,12 @@ export function isPointInTriangle(px: number, py: number, v1: { x: number, y: nu
 }
 
 // Check if a point (e.g., bullet) is inside a rotated rectangle using SAT
-export function pointInRotatedRectangle(px: number, py: number, corners: { x: number, y: number }[]): boolean {
+export function pointInRotatedRectangle(px: number, py: number, corners: Point[]): boolean {
     // Function to calculate the dot product of two vectors
-    const dotProduct = (v1: { x: number, y: number }, v2: { x: number, y: number }) => v1.x * v2.x + v1.y * v2.y;
+    const dotProduct = (v1: Point, v2: Point) => v1.x * v2.x + v1.y * v2.y;
 
     // Function to subtract two points to create a vector
-    const subtract = (p1: { x: number, y: number }, p2: { x: number, y: number }) => ({ x: p1.x - p2.x, y: p1.y - p2.y });
+    const subtract = (p1: Point, p2: Point) => ({ x: p1.x - p2.x, y: p1.y - p2.y });
 
     // Create axes (normals) for the rectangle edges
     const axes = [
@@ -82,7 +82,7 @@ export function pointInRotatedRectangle(px: number, py: number, corners: { x: nu
  * @param normal The normal vector of the surface.
  * @returns The reflected vector.
  */
-export function reflectVector(vector: { dx: number, dy: number }, normal: { x: number, y: number }): { dx: number, dy: number } {
+export function reflectVector(vector: { dx: number, dy: number }, normal: Point): { dx: number, dy: number } {
     const dotProduct = vector.dx * normal.x + vector.dy * normal.y;
     return {
         dx: vector.dx - 2 * dotProduct * normal.x,
@@ -107,7 +107,7 @@ export function clamp(value: number, min: number, max: number): number {
  * @param p2 The second point.
  * @returns The distance between the two points.
  */
-export function distance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
+export function distance(p1: Point, p2: Point): number {
     return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
@@ -116,7 +116,8 @@ export function distance(p1: { x: number, y: number }, p2: { x: number, y: numbe
  * @returns A random color string.
  */
 export function getRandomColor(): string {
-    const colors = ['red', 'green', 'yellow', 'purple', 'orange', 'pink'];
+    // const colors = ['red', 'green', 'yellow', 'purple', 'orange', 'pink'];
+    const colors = ['red', 'green', 'yellow','purple', 'orange','pink', 'cyan', 'magenta', 'gold',];
     return colors[Math.floor(Math.random() * colors.length)];
 }
 export function findGroupEnd(angle:number,startX: number, startY: number, walls: Wall[], size: GameSize, isMovingBackward: boolean): { x: number; y: number, group: Wall[] } | null {
@@ -206,55 +207,6 @@ export function dummyrandom(seed:number) { // so/a:19303725 : This isn't a unifo
     const x = Math.sin(seed++) * 1000000;
     return x - Math.floor(x);
 }
-/**
- * Group adjacent or connected walls into clusters for treating them as single surfaces.
- * @param walls List of individual walls.
- * @returns Array of wall clusters (each cluster is an array of walls).
- */
-export function groupWallClusters(walls: Wall[]): Wall[][] {
-    const clusters: Wall[][] = [];
-    
-    // A basic approach to clustering walls based on adjacency or proximity
-    walls.forEach(wall => {
-        let addedToCluster = false;
-        
-        // Check if the wall can be grouped with any existing cluster
-        clusters.forEach(cluster => {
-            cluster.forEach(clusterWall => {
-                if (areWallsAdjacent(wall, clusterWall)) {
-                    cluster.push(wall);
-                    addedToCluster = true;
-                }
-            });
-        });
-
-        // If no cluster was found, create a new cluster for this wall
-        if (!addedToCluster) {
-            clusters.push([wall]);
-        }
-    });
-
-    return clusters;
-}
-
-/**
- * Checks if two walls are adjacent or close enough to be treated as part of the same cluster.
- * @param wall1 First wall.
- * @param wall2 Second wall.
- * @returns True if walls are adjacent or close.
- */
-function areWallsAdjacent(wall1: Wall, wall2: Wall): boolean {
-    const proximityThreshold = 5; // Define how close the walls need to be to cluster
-
-    // Check if walls are next to each other or very close in any direction
-    return (
-        (Math.abs(wall1.x + wall1.width - wall2.x) < proximityThreshold) ||  // wall1 is to the left of wall2
-        (Math.abs(wall2.x + wall2.width - wall1.x) < proximityThreshold) ||  // wall2 is to the left of wall1
-        (Math.abs(wall1.y + wall1.height - wall2.y) < proximityThreshold) || // wall1 is above wall2
-        (Math.abs(wall2.y + wall2.height - wall1.y) < proximityThreshold)    // wall2 is above wall1
-    );
-}
-
 
 /**
  * Utility function to generate a random maze based on a given width and height.

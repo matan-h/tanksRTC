@@ -4,7 +4,7 @@ import { Constants } from './Constants';
 import { Bullet } from './Bullet';
 
 import { findGroupEnd, isPointInTriangle, pointInRotatedRectangle, rotatePoint } from './Utils'; // Helper function for collision detection
-import { GameSize, TankControls, Wall } from './Types';
+import { GameSize, TankControls, TankShape, Wall } from './Types';
 
 export class Tank {
     x: number;
@@ -18,7 +18,7 @@ export class Tank {
     originalCreationTime: number;
     lastPingSent: number;
     isRemote: boolean;
-    opacity: number;
+    isEliminated: boolean;
 
     speed: number = Constants.TANK_SPEED
 
@@ -37,7 +37,7 @@ export class Tank {
         this.color = color;
         this.controls = controls;
         this.lastShotTime = 0;
-        this.opacity = 1.0
+        this.isEliminated = false;
 
         this.peerId = peerId;
         this.isRemote = isRemote;
@@ -46,7 +46,8 @@ export class Tank {
     }
 
     updateControls(keys: { [key: string]: boolean }, bullets: Bullet[], walls: Wall[], size: GameSize) {
-        if (!this.controls) return { shootBullet: null, wallsUpdated: null };
+
+        if (!this.controls||this.isEliminated) return { shootBullet: null, wallsUpdated: null };
 
         let shootBullet: Bullet | null = null;
         const wallsUpdated: { wallIndex: number }[] = [];
@@ -65,7 +66,7 @@ export class Tank {
         }
         const OOB = this.howOutOfBounds(newX, newY, angle, size)
 
-        if (!this.WallCollides(newX, newY, walls) || this.WallCollides(this.x, this.y, walls)) {
+        if (!this.WallCollides(newX, newY,walls) || this.WallCollides(this.x, this.y,walls)) {
             // Move the tank normally if no collision
             if (!OOB.isOut) {
 
@@ -102,7 +103,7 @@ export class Tank {
         return { shootBullet, wallsUpdated };
     }
     moveOut(walls: Wall[], size: GameSize) {
-        const alreadyCollides = this.WallCollides(this.x, this.y, walls);
+        const alreadyCollides = this.WallCollides(this.x, this.y,walls);
         if (!alreadyCollides) return;
         const OOB = this.howOutOfBounds(this.x, this.y, this.angle, size);
 
@@ -119,6 +120,8 @@ export class Tank {
     }
 
     shoot(bullets: Bullet[]): Bullet | undefined {
+        if (this.isEliminated) return; // Eliminated tanks can't shoot
+
         const now = Date.now();
         if (now - this.lastShotTime > Constants.SHOOT_COOLDOWN) {
             if (this.ownBullets(bullets).length < Constants.TANK_BULLETS_MAX) {
@@ -216,13 +219,38 @@ export class Tank {
 
     }
 
+    public GetShape(x:number,y:number,angle:number): TankShape {
+
+        const halfSize = Constants.TANK_SIZE / 2;
+        const rect_corners = [
+            { x: x - halfSize, y: y - halfSize },
+            { x: x + halfSize, y: y - halfSize },
+            { x: x + halfSize, y: y + halfSize },
+            { x: x - halfSize, y: y + halfSize }
+        ].map(corner => rotatePoint(corner, { x: x, y: y }, angle));
+
+
+        // Calculate the turret's triangular vertices
+        const turretVertices = [
+            { x: x + halfSize, y: y + halfSize },
+            { x: x + halfSize, y: y - halfSize },
+            { x: x + halfSize + Constants.TURRET_SIZE, y: y }
+        ].map(vertex => rotatePoint(vertex, { x: x, y: y }, angle));
+
+
+        return {
+            rect: rect_corners,
+            turret: turretVertices
+        };
+    }
+
+
 
     draw(ctx: CanvasRenderingContext2D) {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        ctx.fillStyle = this.color;
-        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = this.isEliminated ? 'lightgrey' : this.color;
         ctx.fillRect(-Constants.TANK_SIZE / 2, -Constants.TANK_SIZE / 2, Constants.TANK_SIZE, Constants.TANK_SIZE);
         ctx.beginPath();
         ctx.moveTo(Constants.TANK_SIZE / 2, Constants.TANK_SIZE / 2);
@@ -235,38 +263,30 @@ export class Tank {
 
     checkCollisionWithBullet(bullet: Bullet): boolean {
         // Calculate the tank's four corners based on its angle
-        const halfSize = Constants.TANK_SIZE / 2;
-        const rect_corners = [
-            { x: this.x - halfSize, y: this.y - halfSize },
-            { x: this.x + halfSize, y: this.y - halfSize },
-            { x: this.x + halfSize, y: this.y + halfSize },
-            { x: this.x - halfSize, y: this.y + halfSize }
-        ];
-        const rotatedCorners = rect_corners.map(corner => rotatePoint(corner, { x: this.x, y: this.y }, this.angle));
+        const shape = this.GetShape(this.x,this.y,this.angle);
 
-        const turretVertices = [
-            { x: this.x + halfSize, y: this.y + halfSize },
-            { x: this.x + halfSize, y: this.y - halfSize },
-            { x: this.x + halfSize + Constants.TURRET_SIZE, y: this.y }
-        ].map(vertex => rotatePoint(vertex, { x: this.x, y: this.y }, this.angle));
+        const rect_corners =shape.rect;
+
+        const turretVertices = shape.turret;
 
         // Check if the bullet is within the rotated rectangle using SAT (Separating Axis Theorem)
-        return pointInRotatedRectangle(bullet.x, bullet.y, rotatedCorners) || isPointInTriangle(bullet.x, bullet.y, turretVertices[0], turretVertices[1], turretVertices[2]);;
+        return pointInRotatedRectangle(bullet.x, bullet.y, rect_corners) || isPointInTriangle(bullet.x, bullet.y, turretVertices[0], turretVertices[1], turretVertices[2]);;
     }
     ownBullets(bullets_list: Bullet[]): Bullet[] {
         return bullets_list.filter(x => x.owner === this.peerId)
     }
 
     WallCollides(x: number, y: number, walls: Wall[]): boolean {
+        // TODO: use shape.
+        
 
         return walls.some(wall => {
-            const SAFE_MARGIN = 0
-            const extendedLeft = wall.x - SAFE_MARGIN;
-            const extendedRight = wall.x + wall.width + SAFE_MARGIN;
-            const extendedTop = wall.y - SAFE_MARGIN;
-            const extendedBottom = wall.y + wall.height + SAFE_MARGIN;
+            const extendedLeft = wall.x;
+            const extendedRight = wall.x + wall.width;
+            const extendedTop = wall.y;
+            const extendedBottom = wall.y + wall.height;
             return (x > extendedLeft && x < extendedRight &&
-                y > extendedTop && y < extendedBottom);
+                y > extendedTop && y < extendedBottom)
         });
 
     }

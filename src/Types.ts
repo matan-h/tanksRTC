@@ -47,19 +47,13 @@ export interface Tank {
     isRemote?: boolean; // Optional property for distinguishing local vs. remote tanks
 }
 
-// Key controls mapping
-export interface KeyControls {
-    up: string;
-    down: string;
-    left: string;
-    right: string;
-    shoot: string;
-}
-
-
 // Utility function for defining coordinates
 export interface Point {
     x: number;
     y: number;
 }
 
+export interface TankShape {
+    rect: Point[];
+    turret: Point[];
+}

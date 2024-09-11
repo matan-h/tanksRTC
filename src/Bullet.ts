@@ -9,7 +9,6 @@ export class Bullet {
     alpha: number;
     creationTime: number;
     owner: string;
-    isExpired:boolean;
     
     constructor(
         id: number,
@@ -25,7 +24,6 @@ export class Bullet {
         this.dx = dx;
         this.dy = dy;
 
-        this.isExpired = false
         this.alpha = 1.0;
 
         this.creationTime = Date.now();

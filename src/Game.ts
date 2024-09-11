@@ -4,7 +4,7 @@ import { Tank } from './Tank';
 
 import { GameSize, Maze } from './Types';
 import { Bullet } from './Bullet';
-import { Action, ActionTypes, GameOverAction, MoveAction, ShootAction, WallColorChangeAction } from './GameActions';
+import { Action, ActionTypes, EliminatedAction, GameOverAction, MoveAction, ShootAction, WallColorChangeAction } from './GameActions';
 import { Constants } from './Constants';
 
 import { generateMaze, getRandomColor } from './Utils';
@@ -14,6 +14,7 @@ declare type actionType = { send: ActionSender<DataPayload>; receive: ActionRece
 
 export class Game {
     private gameSize: GameSize;
+    private originalGameSize: GameSize;
     private ctx: CanvasRenderingContext2D;
     private localTank: Tank;
     private remoteTanks: Tank[] = [];
@@ -21,7 +22,6 @@ export class Game {
     private maze: Maze | null = null;
 
     private keys: { [key: string]: boolean } = {};
-    private gameOver: boolean = false;
     private winMessage: string = '';
     private restartTimeout: number | null = null;
     private room: Room; // Replace with appropriate type from Trystero librarymultiplayer-tank-game
@@ -35,7 +35,7 @@ export class Game {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        this.gameSize = { height: canvas.height, width: canvas.width };
+        this.originalGameSize = this.gameSize = { height: canvas.height, width: canvas.width };
 
         this.localTank = new Tank(
             this.gameSize.width / 2,
@@ -74,6 +74,10 @@ export class Game {
     }
 
     private setupEventListeners() {
+        const clearkeys = ()=>this.keys = {};
+        window.addEventListener('blur',clearkeys)
+        window.addEventListener('contextmenu',clearkeys)
+
         window.addEventListener('keydown', (event) => {
             this.keys[event.key] = true;
         });
@@ -143,6 +147,10 @@ export class Game {
             case ActionTypes.GAME_OVER:
                 this.handleGameOver(data);
                 break;
+            case ActionTypes.Eliminated:
+                this.handleEliminatedAction(data,peerId);
+                break;
+
             case ActionTypes.PING:
                 this.handlePing(peerId);
                 break;
@@ -150,6 +158,15 @@ export class Game {
                 console.warn('Unknown action data:', data);
         }
     }
+    private handleEliminatedAction(data: EliminatedAction, peerId: string){
+        const tank = this.remoteTanks.find(t => t.peerId === peerId);
+        if (!tank) return
+        tank.isEliminated = true
+        this.bullets = this.bullets.filter(b=>(b.owner!==tank.peerId && b.id!==data.bullet_id))
+
+
+    }
+     
 
     private handleMoveAction(data: MoveAction, peerId: string) {
         let tank = this.remoteTanks.find(t => t.peerId === peerId);
@@ -196,8 +213,9 @@ export class Game {
     }
 
     private handleGameOver(data: GameOverAction) {
-        this.gameOver = true;
-        this.winMessage = data.message!;
+        const winTank = this.remoteTanks.find(t => t.peerId === data.winner);
+        if (winTank)
+        this.onGameOver(winTank)
     }
 
     private handlePing(peerId: string) {
@@ -224,9 +242,9 @@ export class Game {
 
     private startNewGame() {
         // Reset game state
-        this.gameOver = false;
         this.winMessage = '';
         this.bullets = [];
+        [...this.remoteTanks, this.localTank].forEach(x=>x.isEliminated = false)
         //
         const waitingForPid = [...this.remoteTanks, this.localTank].sort((a, b) => a.originalCreationTime - b.originalCreationTime)[0].peerId;
         if (waitingForPid === selfId) {
@@ -247,20 +265,48 @@ export class Game {
         // Start the game loop
         this.gameLoop();
     }
+    private onGameOver(winningTank:Tank){    
 
-    private gameLoop() {
-        if (this.gameOver) {
-            this.drawWinLoseBanner();
+        if (winningTank.peerId === selfId) {
+            // If the local tank is the winner
+            this.winMessage = 'You Win!';
+            this.sendAction({ type: ActionTypes.GAME_OVER, winner: selfId});
+        } else {
+            // If the local tank loses, display the color of the winning tank
+            
+            this.winMessage = "You Lose!";
+            if (this.remoteTanks.length>1){
+                this.winMessage+=`(the ${winningTank.color} tank wins)`
+
+            }
+        }
+        this.drawWinLoseBanner();
             if (this.restartTimeout === null) {
                 this.restartTimeout = window.setTimeout(() => {
                     this.startNewGame();
                     this.restartTimeout = null;
                 }, 3000); // Wait for 3 seconds before restarting
             }
-            return;
-        }
 
-        this.ctx.clearRect(0, 0, this.gameSize.width, this.gameSize.height);
+
+    }
+    private checkGameOverConditions() {
+        const allTanks = [this.localTank, ...this.remoteTanks]
+        // Get active tanks (tanks that are not eliminated)
+        const activeTanks = allTanks.filter(tank => !tank.isEliminated);
+        
+        if (activeTanks.length===0||(activeTanks.length === 1 && allTanks.length!==1)) { // Only one active tank left, they are the winner
+            this.onGameOver(activeTanks[0]||this.localTank)
+            return true
+        }
+    }
+    
+
+    private gameLoop() {
+        if (this.checkGameOverConditions()) return
+
+        // TODO: clear the whole aria alwase
+        this.ctx.clearRect(0, 0, this.originalGameSize.width, this.originalGameSize.height);
 
         // Update local tank and bullets
         if (this.maze) {
@@ -314,23 +360,21 @@ export class Game {
     }
 
     private checkCollisions() {
+        const eliminated:string[] = []
         // Check collisions with walls and other game elements
         this.bullets.forEach(bullet => {
 
-            if (this.localTank.checkCollisionWithBullet(bullet)) {
-                this.gameOver = true;
-                this.winMessage = 'Game over!';
-                this.sendAction({ type: ActionTypes.GAME_OVER, message: 'You win' });
-            } else {
-                this.remoteTanks.forEach(tank => {
-                    if (tank.checkCollisionWithBullet(bullet)) {
-                        this.gameOver = true;
-                        this.winMessage = 'You Win!';
-                        this.sendAction({ type: ActionTypes.GAME_OVER, message: 'Game Over' });
-                    }
+                if (this.localTank.checkCollisionWithBullet(bullet)){
+                    eliminated.push(this.localTank.peerId)
+                    this.localTank.isEliminated = true;
+                    bullet.creationTime =0;
+                    this.sendAction({type:ActionTypes.Eliminated,bullet_id:bullet.id})
+                    // TODO: this.sendAction
+                }
+
                 });
-            }
-        });
+
+        this.bullets = this.bullets.filter(x=>!eliminated.includes(x.owner))
     }
 
     private checkInactiveTanks() {

@@ -207,7 +207,7 @@ export class Game {
                 wall.currentColor = this.remoteTanks.find(t => t.peerId === peerId)?.color;
                 setTimeout(() => {
                     wall.currentColor = wall.originalColor;
-                }, 300);
+                }, Constants.WALL_COLOR_CHANGE_DURATION);
             }
         });
     }
@@ -267,7 +267,7 @@ export class Game {
     }
     private onGameOver(winningTank:Tank){    
 
-        if (winningTank.peerId === selfId) {
+        if (winningTank.peerId === selfId && this.remoteTanks.length!==0) {
             // If the local tank is the winner
             this.winMessage = 'You Win!';
             this.sendAction({ type: ActionTypes.GAME_OVER, winner: selfId});
@@ -285,7 +285,7 @@ export class Game {
                 this.restartTimeout = window.setTimeout(() => {
                     this.startNewGame();
                     this.restartTimeout = null;
-                }, 3000); // Wait for 3 seconds before restarting
+                }, Constants.WINLOSE_BANNER_TIMEOUT); // Wait for 3 seconds before restarting
             }
 
 

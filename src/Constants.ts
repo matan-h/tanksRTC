@@ -37,24 +37,7 @@ export const Constants = {
     MAX_TELEPORT_DISTANCE: 200,
 
 
-    // Action types
-    ACTION_MOVE: 'move',
-    ACTION_SHOOT: 'shoot',
-    ACTION_UPDATE_BULLET: 'updateBullet',
-    ACTION_MAZE: 'maze',
-    ACTION_WALL_COLOR_CHANGE: 'wallColorChange',
-    ACTION_NEW_GAME: 'newGame',
-    ACTION_GAME_OVER: 'gameOver',
-    ACTION_PING: 'ping',
-
-    // Key mappings for tank controls
-    KEY_UP: 'ArrowUp',
-    KEY_DOWN: 'ArrowDown',
-    KEY_LEFT: 'ArrowLeft',
-    KEY_RIGHT: 'ArrowRight',
-    KEY_SHOOT: ' ',
-
     // Misc
-    BULLET_FADE_DURATION: 1.5, // seconds
     WALL_COLOR_CHANGE_DURATION: 300, // milliseconds
+    WINLOSE_BANNER_TIMEOUT:2000 // 2s
 };

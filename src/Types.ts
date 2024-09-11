@@ -28,24 +28,6 @@ export interface TankControls {
     shoot: string;
 };
 
-export interface TankMovement {
-    UP:boolean,
-    DOWN:boolean,
-    LEFT:boolean,
-    RIGHT:boolean,
-}
-
-// Tank properties
-export interface Tank {
-    x: number;
-    y: number;
-    angle: number;
-    color: string;
-    peerId: string;
-    originalCreationTime: number;
-    lastPingSent?: number; // Optional property for tracking pings
-    isRemote?: boolean; // Optional property for distinguishing local vs. remote tanks
-}
 
 // Utility function for defining coordinates
 export interface Point {

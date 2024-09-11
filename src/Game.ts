@@ -275,9 +275,9 @@ export class Game {
             // If the local tank loses, display the color of the winning tank
             
             this.winMessage = "You Lose!";
+            if (this.remoteTanks.length===0) this.winMessage = "Game Over!";
             if (this.remoteTanks.length>1){
                 this.winMessage+=`(the ${winningTank.color} tank wins)`
-
             }
         }
         this.drawWinLoseBanner();

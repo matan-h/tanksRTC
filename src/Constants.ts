@@ -18,6 +18,7 @@ export const Constants = {
     TURRET_SIZE:20,
     TANK_BULLETS_MAX: 10,
     SHOOT_COOLDOWN: 200,//ms
+    INACTIVE_TANKS_TIMEOUT: 3000, //ms //TODO
 
     // Bullet properties
     BULLET_SPEED: 5,
@@ -32,7 +33,8 @@ export const Constants = {
 
     // Ping & timeout intervals
     PING_INTERVAL: 3000, // ms
-    PING_TIMEOUT: 7000, // 2 missed pings allowed.
+    PING_TIMEOUT: 7000, // 2.5 missed pings allowed.
+
     GETMAZE_TIMEOUT: 1900, // ms players can stay without map
 
     // Teleport

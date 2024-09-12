@@ -53,7 +53,7 @@ export interface WallColorChangeAction extends BaseAction {
 // Action for initializing a new maze
 export interface NewMazeAction extends BaseAction {
     type: ActionTypes.NEW_MAZE;
-    maze: Maze;
+    maze: Maze; // FIXME: no need to send the walls as list.
 }
 
 // Action for game over scenario

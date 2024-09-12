@@ -1,7 +1,7 @@
 // Game.ts
 
 import { Tank } from './Tank';
-import { GameSize, Maze } from './Types';
+import { GameSize, Maze, Wall } from './Types';
 import { Bullet } from './Bullet';
 import {
     Action, ActionTypes, EliminatedAction, GameOverAction, MoveAction,
@@ -9,7 +9,7 @@ import {
     NewUserAction, PingAction, ShootAction, WallColorChangeAction
 } from './GameActions';
 import { Constants } from './Constants';
-import { fixSize, generateMaze, getRandomColor, StringToSeed } from './Utils';
+import { dummyrandom, fixSize, generateMaze, getRandomColor, StringToSeed } from './Utils';
 import { selfId, joinRoom, Room, ActionSender, DataPayload, ActionReceiver } from 'trystero';
 
 // Type alias for action type sender and receiver
@@ -29,6 +29,7 @@ export class Game {
     private restartTimeout: number | null = null;
 
     private room: Room;
+    private roomId: string;
     private actions: actionType;
 
     constructor(canvasId: string, roomId: string) {
@@ -47,6 +48,7 @@ export class Game {
             { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', shoot: ' ' },
             { peerId: selfId, originalScreenSize: this.originalGameSize }
         );
+        this.roomId = roomId;
 
         this.room = this.joinRoom(roomId);
         this.actions = this.createActions();
@@ -103,7 +105,7 @@ export class Game {
         this.actions.receive(this.handleAction.bind(this));
 
         // Periodically send a ping
-        setInterval(this.sendPing.bind(this), Constants.PING_INTERVAL);
+        // setInterval(this.sendPing.bind(this), Constants.PING_INTERVAL);
     }
 
     private GetTank(peerId: string): Tank | undefined {
@@ -175,16 +177,19 @@ export class Game {
 
     private handleNewMaze(data: NewMazeAction, tank?: Tank) {
         if (!tank) return // dont allow removed users to set maze.
+        // if they are late, dont accept the map.
+        if (this.maze && data.maze.time > this.maze.time) return
+        this.maze = this.generateMaze(data.maze.seed, fixSize(data.maze.size));
         this.localGotoRandom();
-        this.maze = this.generateMaze(data.maze.seed, data.maze.size);
     }
 
     /**
      * Handle a new user action when a new tank joins the room.
-     */
-    private handleNewUser(data: NewUserAction, already_tank: Tank | undefined, peerId: string) {
-        if (already_tank) return; // Avoid duplicate handling (sendAction->handleNewUser->sendAction)
-
+    */
+   private handleNewUser(data: NewUserAction, already_tank: Tank | undefined, peerId: string) {
+       if (already_tank) return; // Avoid duplicate handling (sendAction->handleNewUser->sendAction)
+       const lowestSizeTank = this.getLowestTank();
+       
         this.sendAction({
             type: ActionTypes.NEW_USER,
             x: this.localTank.x,
@@ -208,11 +213,10 @@ export class Game {
         );
         this.remoteTanks.push(tank);
 
-        const lowestSizeTank = this.getLowestTank();
-        if (data.seed && data.seed !== this.maze?.seed && lowestSizeTank.player.peerId === peerId) {
-            console.log("[debug] [handleNewUser] generating maze...", lowestSizeTank.player.originalScreenSize);
-            this.maze = this.generateMaze(data.seed, lowestSizeTank.player.originalScreenSize);
-        }
+        // if (data.seed && data.seed !== this.maze?.seed && lowestSizeTank.player.peerId === peerId) {
+        //     console.log("[debug] [handleNewUser] generating maze...", lowestSizeTank.player.originalScreenSize);
+        //     this.maze = this.generateMaze(data.seed, lowestSizeTank.player.originalScreenSize);
+        // }
         if (lowestSizeTank === this.localTank && this.maze) {
             this.sendAction({ type: ActionTypes.NEW_MAZE, maze: this.maze }, peerId);
         }
@@ -266,7 +270,7 @@ export class Game {
         if (tank) {
             tank.player.lastPingSent = Date.now();
 
-            if (this.maze && data.mazeTime && data.seed !== this.maze.seed && data.mazeTime < this.maze?.time) {
+            if (this.maze && (!(data.mazeTime && data.seed) || (data.mazeTime && data.seed !== this.maze.seed && data.mazeTime < this.maze?.time))) {
                 this.sendAction({ type: ActionTypes.NEW_MAZE, maze: this.maze });
 
             }
@@ -286,9 +290,10 @@ export class Game {
     }
 
     private generateMaze(seed: number, gamesize: GameSize): Maze {
+        if (seed===this.maze?.seed && this.maze.size.width===gamesize.width && this.maze.size.height===gamesize.height) return this.maze
         console.trace("generateMaze", seed, gamesize);
         const newMaze = generateMaze(gamesize, Constants.WALL_SIZE, seed);
-        if (this.gameSize !== gamesize) {
+        if (this.gameSize.height !== gamesize.height || this.gameSize.width !== gamesize.width ) {
             this.setGameSize(gamesize);
         }
         return { walls: newMaze, seed: seed, time: Date.now(), size: gamesize };
@@ -301,26 +306,27 @@ export class Game {
         this.startNewGame(failed_tanks);
     }
 
-    private startNewGame(failed_tanks: Tank[]=[]) {
+    private startNewGame(failed_tanks: Tank[] = []) {
         console.log("startNewGame")
         // Reset game state
         this.winMessage = '';
         this.maze = null;
         this.bullets = [];
-        [...this.remoteTanks, this.localTank].forEach(x => x.isEliminated = false);
+        const tanks = [...this.remoteTanks, this.localTank]
+        tanks.forEach(x => x.isEliminated = false);
 
-        const lowestSizeTank = this.getLowestTank();
+        const lowestSizeTank = this.getLowestTank(tanks.filter(t=>!failed_tanks.includes(t)));
         if (lowestSizeTank === this.localTank) {
             const seed = Math.random();
             this.maze = this.generateMaze(seed, this.gameSize);
+            this.localGotoRandom();
             console.log('Attempt to start a new game');
             this.sendAction({ type: ActionTypes.NEW_MAZE, maze: this.maze });
         } else {
             console.log('Waiting for PID// TODO', lowestSizeTank.player.peerId);
-            setTimeout(() => this.listen_Maze([lowestSizeTank,...failed_tanks]), Constants.GETMAZE_TIMEOUT);
+            setTimeout(() => this.listen_Maze([lowestSizeTank, ...failed_tanks]), Constants.GETMAZE_TIMEOUT);
         }
 
-        this.localGotoRandom();
     }
 
     private onGameOver(winningTank: Tank) {
@@ -354,12 +360,15 @@ export class Game {
     }
 
     private gameLoop() {
+        // setInterval works when the tab is completely inactive, so it make sense here to check if the gameloop is active
+        if (Date.now() - this.localTank.player.lastPingSent! >= Constants.PING_INTERVAL) this.sendPing()
+
         if (this.checkGameOverConditions()) {
             requestAnimationFrame(() => this.gameLoop());
             return;
         }
 
-        this.ctx.clearRect(0, 0, this.originalGameSize.width, this.originalGameSize.height);
+        this.ctx.clearRect(0, 0, window.innerWidth,window.innerHeight);
 
         if (this.maze) {
             const { shootBullet, wallsUpdated } = this.localTank.updateControls(this.keys, this.bullets, this.maze!.walls, this.gameSize);
@@ -411,6 +420,7 @@ export class Game {
     }
 
     private checkCollisions() {
+        if (this.localTank.isEliminated) return
         let eliminated = false;
         this.bullets.forEach(bullet => {
             if (this.localTank.checkCollisionWithBullet(bullet)) {
@@ -436,11 +446,64 @@ export class Game {
 
     private sendPing() {
         this.sendAction({ type: ActionTypes.PING, seed: this.maze?.seed, mazeTime: this.maze?.time });
+        this.localTank.player.lastPingSent = Date.now();
     }
 
     private localGotoRandom() {
-        this.localTank.x = Math.random() * this.gameSize.width;
-        this.localTank.y = Math.random() * this.gameSize.height;
+        if (!this.maze) return
+        // make sure in one world, the same player in the same room would result in the same location.
+        const seed = StringToSeed(this.roomId+selfId)
+
+        // Define the size of each grid cell
+        const cellSize = Constants.TANK_SIZE * 2; // Size of the grid cell
+        const numCols = Math.ceil(this.gameSize.width / cellSize); // Number of columns in the grid
+        const numRows = Math.ceil(this.gameSize.height / cellSize); // Number of rows in the grid
+
+        // Array to hold valid cell positions
+        const validCells: { x: number, y: number }[] = [];
+
+        // Iterate through each cell in the grid
+        for (let row = 0; row < numRows; row++) {
+            for (let col = 0; col < numCols; col++) {
+                // Calculate the center position of the cell
+                const cellX = col * cellSize + cellSize / 2;
+                const cellY = row * cellSize + cellSize / 2;
+
+                // Check if the cell is valid (not colliding with walls and within bounds)
+                if (!isCellColliding(cellX, cellY, this.maze?.walls, this.gameSize)) {
+                    validCells.push({ x: cellX, y: cellY });
+                }
+            }
+        }
+
+        // If there are valid cells, select a random one
+        if (validCells.length > 0) {
+            const randomIndex = Math.floor(dummyrandom(seed) * validCells.length);
+            const { x, y } = validCells[randomIndex];
+            this.localTank.x = x;
+            this.localTank.y = y;
+            this.localTank.angle = dummyrandom(seed) * 2 * Math.PI; // set a random angle
+        }
+        function isCellColliding(x: number, y: number, walls: Wall[], gameSize: GameSize): boolean {
+            // Check if the cell is out of bounds
+            if (x < 0 || x > gameSize.width || y < 0 || y > gameSize.height) {
+                return true;
+            }
+
+            // Check if the cell collides with any walls
+            const tankSize = Constants.TANK_SIZE;
+            return walls.some(wall => {
+                const left = x - tankSize / 2;
+                const right = x + tankSize / 2;
+                const top = y - tankSize / 2;
+                const bottom = y + tankSize / 2;
+                return left < wall.x + wall.width && right > wall.x &&
+                    top < wall.y + wall.height && bottom > wall.y;
+            });
+        }
+
+        // this.localTank.x = Math.random() * this.gameSize.width;
+        // this.localTank.y = Math.random() * this.gameSize.height;
         this.localTank.moveOut(this.maze?.walls || [], this.gameSize);
     }
 }

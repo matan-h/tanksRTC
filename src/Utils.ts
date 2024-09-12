@@ -13,6 +13,10 @@ export function uuidv4(): string {
     );
 }
 export function fixSize(size:GameSize):GameSize {
+    size.height = clamp(size.height, Constants.MIN_GAME_HEIGHT,Constants.MAX_GAME_HEIGHT);
+    size.width = clamp(size.width, Constants.MIN_GAME_WIDTH,Constants.MAX_GAME_WIDTH);
+    return size;
+
     if (size.height < Constants.MIN_GAME_HEIGHT||size.width< Constants.MIN_GAME_WIDTH ){
         return {"height":Constants.MIN_GAME_WIDTH,"width":Constants.MIN_GAME_WIDTH}
     }

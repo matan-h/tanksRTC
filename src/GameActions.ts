@@ -25,7 +25,7 @@ export interface MoveAction extends BaseAction {
     x: number;
     y: number;
     angle: number;
-    originalCreationTime: number;
+    // originalCreationTime: number;
 }
 export interface NewUserAction extends BaseAction {
     type: ActionTypes.NEW_USER;
@@ -35,6 +35,7 @@ export interface NewUserAction extends BaseAction {
 
     screen:GameSize;
     originalCreationTime: number;
+    seed?:number;
 
 }
 export interface ShootAction extends BaseAction {

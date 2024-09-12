@@ -8,6 +8,9 @@ export const Constants = {
     MIN_GAME_WIDTH: 800,
     MIN_GAME_HEIGHT: 600,
 
+    MAX_GAME_WIDTH: 1920,
+    MAX_GAME_HEIGHT: 1080,
+
     // Tank properties
     TANK_SPEED: 3,
     TANK_ROTATION_SPEED: 0.1,

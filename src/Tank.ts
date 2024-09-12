@@ -15,7 +15,6 @@ export class Tank {
     lastShotTime: number;
     player: Player;
     originalCreationTime: number;
-    lastPingSent: number;
     isRemote: boolean;
     isEliminated: boolean;
     speed: number = Constants.TANK_SPEED;
@@ -39,7 +38,7 @@ export class Tank {
         this.player = owner;
         this.isRemote = isRemote;
         this.originalCreationTime = originalCreationTime;
-        this.lastPingSent = Date.now();
+        this.player.lastPingSent = Date.now();
     }
 
     /**

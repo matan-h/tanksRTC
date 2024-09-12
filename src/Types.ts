@@ -17,11 +17,14 @@ export interface Wall {
 }
 export interface Maze{
     seed:number,
-    walls:Wall[]
+    walls:Wall[],
+    time:number,
+    size:GameSize
 }
 export interface Player{
     peerId:string,
     originalScreenSize:GameSize
+    lastPingSent?: number;
 
 }
 export interface TankControls {

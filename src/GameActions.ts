@@ -1,6 +1,6 @@
 // GameActions.ts
 
-import { GameSize } from "./Types";
+import { GameSize,Maze } from "./Types";
 
 // Enum for defining action types in the game
 export enum ActionTypes {
@@ -53,8 +53,7 @@ export interface WallColorChangeAction extends BaseAction {
 // Action for initializing a new maze
 export interface NewMazeAction extends BaseAction {
     type: ActionTypes.NEW_MAZE;
-    seed: number;
-    gamesize: GameSize;
+    maze: Maze;
 }
 
 // Action for game over scenario
@@ -72,6 +71,8 @@ export interface EliminatedAction extends BaseAction {
 // Action for a ping message
 export interface PingAction extends BaseAction {
     type: ActionTypes.PING;
+    seed?: number;
+    mazeTime?: number;
 }
 
 // Union type representing all possible actions
@@ -84,9 +85,3 @@ export type Action =
     | PingAction
     | EliminatedAction
     | NewUserAction;
-
-// Interface defining methods for handling actions
-export interface ActionMethods {
-    send: (action: Action, peerId?: string) => void;
-    receive: (callback: (data: Action, peerId: string) => void) => void;
-}

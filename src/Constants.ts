@@ -33,7 +33,7 @@ export const Constants = {
     // Ping & timeout intervals
     PING_INTERVAL: 3000, // ms
     PING_TIMEOUT: 7000, // 2 missed pings allowed.
-    GETMAZE_TIMEOUT: 900, // ms players can stay without map
+    GETMAZE_TIMEOUT: 1900, // ms players can stay without map
 
     // Teleport
     // If the angle is greater than n radians, reject teleportation

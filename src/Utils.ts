@@ -12,6 +12,13 @@ export function uuidv4(): string {
         ((+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4) >>> 0).toString(16)
     );
 }
+export function fixSize(size:GameSize):GameSize {
+    if (size.height < Constants.MIN_GAME_HEIGHT||size.width< Constants.MIN_GAME_WIDTH ){
+        return {"height":Constants.MIN_GAME_WIDTH,"width":Constants.MIN_GAME_WIDTH}
+    }
+    return size
+
+}
 
 /**
  * Checks if a given point is inside a rectangular boundary.
@@ -110,15 +117,16 @@ export function clamp(value: number, min: number, max: number): number {
 export function distance(p1: Point, p2: Point): number {
     return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
+export function StringToSeed(str:string){
+    return Array.from(str, c=>c.charCodeAt(0)).reduce((a, b) => a + b, 0)
 
-/**
- * Generates a random color from a predefined set of colors.
- * @returns A random color string.
- */
-export function getRandomColor(): string {
+}
+
+
+export function getRandomColor(seed:number): string {
     // const colors = ['red', 'green', 'yellow', 'purple', 'orange', 'pink'];
     const colors = ['red', 'green', 'yellow','purple', 'orange','pink', 'cyan', 'magenta', 'gold',];
-    return colors[Math.floor(Math.random() * colors.length)];
+    return colors[Math.floor(dummyrandom(seed) * colors.length)];
 }
 export function findGroupEnd(angle:number,startX: number, startY: number, walls: Wall[], size: GameSize, isMovingBackward: boolean): { x: number; y: number, group: Wall[] } | null {
     const group: Wall[] = [];

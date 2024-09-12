@@ -4,10 +4,10 @@ import { Tank } from './Tank';
 
 import { GameSize, Maze } from './Types';
 import { Bullet } from './Bullet';
-import { Action, ActionTypes, EliminatedAction, GameOverAction, MoveAction, ShootAction, WallColorChangeAction } from './GameActions';
+import { Action, ActionTypes, EliminatedAction, GameOverAction, MoveAction, NewUserAction, ShootAction, WallColorChangeAction } from './GameActions';
 import { Constants } from './Constants';
 
-import { generateMaze, getRandomColor } from './Utils';
+import { fixSize, generateMaze, getRandomColor, StringToSeed } from './Utils';
 import { selfId, joinRoom, Room, ActionSender, DataPayload, ActionReceiver } from 'trystero';
 
 declare type actionType = { send: ActionSender<DataPayload>; receive: ActionReceiver<DataPayload>; }
@@ -47,15 +47,16 @@ export class Game {
                 left: 'ArrowLeft',
                 right: 'ArrowRight',
                 shoot: ' '
-            }, selfId
+            }, {peerId:selfId,originalScreenSize:this.originalGameSize}
         );
 
         this.room = this.joinRoom(roomId);
         this.actions = this.createActions();
+        
         // debug info:
         if (location.hostname === 'localhost') {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (window as any).dbg = { localTank: this.localTank, remoteTanks: this.remoteTanks, maze: this.maze,game:this }
+            (window as any).dbg = { localTank: this.localTank, remoteTanks: this.remoteTanks, maze: this.maze,game:this ,ctx:this.ctx}
         }
 
 
@@ -64,39 +65,53 @@ export class Game {
     }
 
     private joinRoom(roomId: string): Room {
-        // Replace with the actual room joining logic
         return joinRoom({ appId: Constants.APP_ID }, roomId);
     }
-
+    
     private createActions(): actionType {
         const [sendAction, getAction] = this.room.makeAction('action');
         return { send: sendAction, receive: getAction };
     }
-
+    
     private setupEventListeners() {
         const clearkeys = ()=>this.keys = {};
         window.addEventListener('blur',clearkeys)
         window.addEventListener('contextmenu',clearkeys)
-
+        
         window.addEventListener('keydown', (event) => {
             this.keys[event.key] = true;
         });
-
+        
         window.addEventListener('keyup', (event) => {
             this.keys[event.key] = false;
         });
-
+        
         this.room.onPeerJoin(this.handlePeerJoin.bind(this));
         this.room.onPeerLeave(this.handlePeerLeave.bind(this));
-
+        
         this.actions.receive(this.handleAction.bind(this));
-
+        
         setInterval(this.sendPing.bind(this), Constants.PING_INTERVAL);
+    }
+    
+
+
+    private tank(peerId: string){
+        return this.remoteTanks.find(t => t.player.peerId === peerId);
+
     }
 
     private handlePeerJoin(peerId: string) {
         console.log(`${peerId} joined`);
-        if (peerId.localeCompare(selfId) === 1 && this.maze) {
+        this.sendAction({
+            type: ActionTypes.NEW_USER,
+            x: this.localTank.x,
+            y: this.localTank.y,
+            angle: this.localTank.angle,
+            screen:this.localTank.player.originalScreenSize,
+            originalCreationTime: this.localTank.originalCreationTime
+    }, peerId);
+        /*if (peerId.localeCompare(selfId) === 1 && this.maze) {
             this.sendAction({ type: ActionTypes.MAZE, seed: this.maze.seed, gamesize: this.gameSize });
             this.sendAction({
                 type: ActionTypes.MOVE,
@@ -115,7 +130,7 @@ export class Game {
                     originalCreationTime: tank.originalCreationTime
                 }, peerId);
             });
-        }
+        }*/
     }
 
     private handlePeerLeave(peerId: string) {
@@ -144,6 +159,9 @@ export class Game {
             case ActionTypes.NEW_GAME:
                 this.localGotoRandom()
                 break;
+            case ActionTypes.NEW_USER:
+                this.handleNewUser(data,peerId);
+                break;
             case ActionTypes.GAME_OVER:
                 this.handleGameOver(data);
                 break;
@@ -158,20 +176,77 @@ export class Game {
                 console.warn('Unknown action data:', data);
         }
     }
+    
+    private handleNewUser(data:NewUserAction,peerId:string){
+        if (this.tank(peerId)) return // the sendAction->handleNewUser->sendAction is a loop.
+
+            this.sendAction({type:ActionTypes.NEW_USER,
+            x:this.localTank.x,
+            y:this.localTank.y,
+            angle:this.localTank.angle,
+            screen:this.originalGameSize,
+            originalCreationTime:this.localTank.originalCreationTime
+        },peerId)
+
+        const size = fixSize(data.screen);
+        
+
+        // get minimum:
+        const TankValue = (t:Tank)=>t.player.originalScreenSize.width+t.player.originalScreenSize.height
+        const lowestSizeTank = [...this.remoteTanks, this.localTank].reduce(((prev, curr) => TankValue(prev) < TankValue(curr) ? prev : curr));
+        //
+        const color = getRandomColor(StringToSeed(peerId));
+            const tank = new Tank(
+                data.x,
+                data.y,
+                color,
+                null,
+                {peerId:peerId,originalScreenSize:size},
+                true,
+                data.originalCreationTime
+            );
+            this.remoteTanks.push(tank);
+            //
+
+        if (lowestSizeTank===this.localTank && this.maze) {
+            this.sendAction({ type: ActionTypes.MAZE, seed: this.maze.seed, gamesize: this.gameSize },peerId);
+            // this.sendAction({
+            //     type: ActionTypes.MOVE,
+            //     x: this.localTank.x,
+            //     y: this.localTank.y,
+            //     angle: this.localTank.angle,
+            //     originalCreationTime: this.localTank.originalCreationTime
+            // });
+
+            /*this.remoteTanks.forEach(tank => {
+                this.sendAction({
+                    type: ActionTypes.MOVE,
+                    x: tank.x,
+                    y: tank.y,
+                    angle: tank.angle,
+                    originalCreationTime: tank.originalCreationTime
+                }, peerId);
+            });*/
+        }
+
+
+
+
+    }
     private handleEliminatedAction(data: EliminatedAction, peerId: string){
-        const tank = this.remoteTanks.find(t => t.peerId === peerId);
+        const tank = this.tank(peerId);
         if (!tank) return
         tank.isEliminated = true
-        this.bullets = this.bullets.filter(b=>(b.owner!==tank.peerId && b.id!==data.bullet_id))
+        this.bullets = this.bullets.filter(b=>(b.owner!==tank.player.peerId && b.id!==data.bullet_id))
 
 
     }
      
 
     private handleMoveAction(data: MoveAction, peerId: string) {
-        let tank = this.remoteTanks.find(t => t.peerId === peerId);
+        const tank = this.tank( peerId);
         if (!tank) {
-            const color = getRandomColor();
+            /*const color = getRandomColor();
             tank = new Tank(
                 data.x,
                 data.y,
@@ -181,7 +256,7 @@ export class Game {
                 true,
                 data.originalCreationTime
             );
-            this.remoteTanks.push(tank);
+            this.remoteTanks.push(tank);*/
         }
         else {
             // TODO: verify
@@ -190,12 +265,12 @@ export class Game {
             tank.angle = data.angle;
         }
     }
+    
 
     private handleShootAction(_data: ShootAction, peerId: string) {
-        const tank = this.remoteTanks.find(t => t.peerId === peerId);
+        const tank = this.tank( peerId);
         if (!tank) return
 
-        // this.bullets.push(bullet);
         tank.shoot(this.bullets)
     }
 
@@ -204,7 +279,7 @@ export class Game {
         wallsUpdated.forEach(wallData => {
             const wall = this.maze?.walls[wallData.wallIndex];
             if (wall) {
-                wall.currentColor = this.remoteTanks.find(t => t.peerId === peerId)?.color;
+                wall.currentColor = this.tank( peerId)?.color;
                 setTimeout(() => {
                     wall.currentColor = wall.originalColor;
                 }, Constants.WALL_COLOR_CHANGE_DURATION);
@@ -213,13 +288,13 @@ export class Game {
     }
 
     private handleGameOver(data: GameOverAction) {
-        const winTank = this.remoteTanks.find(t => t.peerId === data.winner);
+        const winTank = this.tank( data.winner);
         if (winTank)
         this.onGameOver(winTank)
     }
 
     private handlePing(peerId: string) {
-        const tankPing = this.remoteTanks.find(t => t.peerId === peerId);
+        const tankPing = this.tank( peerId);
         if (tankPing) {
             tankPing.lastPingSent = Date.now();
         }
@@ -230,23 +305,32 @@ export class Game {
     }
 
     private removeTank(peerId: string) {
-        this.remoteTanks = this.remoteTanks.filter(tank => tank.peerId !== peerId);
+        this.remoteTanks = this.remoteTanks.filter(tank => tank.player.peerId !== peerId);
     }
     private generateMaze(seed: number, gamesize: GameSize) {
         console.trace("generateMaze", seed, gamesize)
         const newMaze = generateMaze(gamesize, Constants.WALL_SIZE, seed);
-        this.gameSize = gamesize
-        this.maze = { walls: newMaze, seed: seed, }//:gamesize}
+        if (this.gameSize!==gamesize){
+            this.ctx.canvas.width = gamesize.width;
+            this.ctx.canvas.height = gamesize.height;
+            
+            this.gameSize = gamesize
+        }
+        this.maze = { walls: newMaze, seed: seed, }
 
     }
 
+    
     private startNewGame() {
+        
         // Reset game state
         this.winMessage = '';
         this.bullets = [];
         [...this.remoteTanks, this.localTank].forEach(x=>x.isEliminated = false)
         //
-        const waitingForPid = [...this.remoteTanks, this.localTank].sort((a, b) => a.originalCreationTime - b.originalCreationTime)[0].peerId;
+        const waitingForPid = [...this.remoteTanks, this.localTank].sort((a, b) => a.originalCreationTime - b.originalCreationTime)[0].player.peerId;
+        // FIXME: 
+        
         if (waitingForPid === selfId) {
             const seed = Math.random();
             this.generateMaze(seed, this.gameSize);
@@ -261,13 +345,14 @@ export class Game {
         }
 
         this.localGotoRandom();
+        
 
         // Start the game loop
         this.gameLoop();
     }
     private onGameOver(winningTank:Tank){    
 
-        if (winningTank.peerId === selfId && this.remoteTanks.length!==0) {
+        if (winningTank.player.peerId === selfId && this.remoteTanks.length!==0) {
             // If the local tank is the winner
             this.winMessage = 'You Win!';
             this.sendAction({ type: ActionTypes.GAME_OVER, winner: selfId});
@@ -360,12 +445,12 @@ export class Game {
     }
 
     private checkCollisions() {
-        const eliminated:string[] = []
+        let eliminated = false
         // Check collisions with walls and other game elements
         this.bullets.forEach(bullet => {
 
                 if (this.localTank.checkCollisionWithBullet(bullet)){
-                    eliminated.push(this.localTank.peerId)
+                    eliminated = true
                     this.localTank.isEliminated = true;
                     bullet.creationTime =0;
                     this.sendAction({type:ActionTypes.Eliminated,bullet_id:bullet.id})
@@ -373,15 +458,14 @@ export class Game {
                 }
 
                 });
-
-        this.bullets = this.bullets.filter(x=>!eliminated.includes(x.owner))
+        if (eliminated)  this.bullets = this.bullets.filter(x=>x.owner!==selfId)
     }
 
     private checkInactiveTanks() {
         const now = Date.now();
         this.remoteTanks.forEach(tank => {
             if (now - tank.lastPingSent > Constants.PING_TIMEOUT) {
-                this.removeTank(tank.peerId);
+                this.removeTank(tank.player.peerId);
             }
         });
     }

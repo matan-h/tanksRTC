@@ -4,7 +4,7 @@ import { Constants } from './Constants';
 import { Bullet } from './Bullet';
 
 import { findGroupEnd, isPointInTriangle, pointInRotatedRectangle, rotatePoint } from './Utils'; // Helper function for collision detection
-import { GameSize, TankControls, TankShape, Wall } from './Types';
+import { GameSize, Player, TankControls, TankShape, Wall } from './Types';
 
 export class Tank {
     x: number;
@@ -14,7 +14,7 @@ export class Tank {
     controls: TankControls | null;
 
     lastShotTime: number;
-    peerId: string;
+    player: Player;
     originalCreationTime: number;
     lastPingSent: number;
     isRemote: boolean;
@@ -27,9 +27,9 @@ export class Tank {
         y: number,
         color: string,
         controls: TankControls | null,
-        peerId: string,
+        owner:Player,
         isRemote: boolean = false,
-        originalCreationTime: number = Date.now()
+        originalCreationTime: number = Date.now(),
     ) {
         this.x = x;
         this.y = y;
@@ -39,7 +39,7 @@ export class Tank {
         this.lastShotTime = 0;
         this.isEliminated = false;
 
-        this.peerId = peerId;
+        this.player = owner;
         this.isRemote = isRemote;
         this.originalCreationTime = originalCreationTime;
         this.lastPingSent = Date.now();
@@ -131,7 +131,7 @@ export class Tank {
                     this.y + Math.sin(this.angle) * (Constants.TANK_SIZE / 2 + Constants.TURRET_SIZE),
                     Math.cos(this.angle) * 5,
                     Math.sin(this.angle) * 5,
-                    this.peerId
+                    this.player.peerId
                 )
                 this.lastShotTime = now;
                 bullets.push(bullet);
@@ -273,7 +273,7 @@ export class Tank {
         return pointInRotatedRectangle(bullet.x, bullet.y, rect_corners) || isPointInTriangle(bullet.x, bullet.y, turretVertices[0], turretVertices[1], turretVertices[2]);;
     }
     ownBullets(bullets_list: Bullet[]): Bullet[] {
-        return bullets_list.filter(x => x.owner === this.peerId)
+        return bullets_list.filter(x => x.owner === this.player.peerId)
     }
 
     WallCollides(x: number, y: number, walls: Wall[]): boolean {

@@ -5,8 +5,8 @@ export const Constants = {
     APP_ID: 'multiplayer-tank-game',
 
     // Game configurations
-    GAME_WIDTH: 800,
-    GAME_HEIGHT: 600,
+    MIN_GAME_WIDTH: 800,
+    MIN_GAME_HEIGHT: 600,
 
     // Tank properties
     TANK_SPEED: 3,

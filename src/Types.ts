@@ -19,7 +19,11 @@ export interface Maze{
     seed:number,
     walls:Wall[]
 }
+export interface Player{
+    peerId:string,
+    originalScreenSize:GameSize
 
+}
 export interface TankControls {
     up: string;
     down: string;

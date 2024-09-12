@@ -10,6 +10,7 @@ export enum ActionTypes {
     MAZE = 'maze',
     WALL_COLOR_CHANGE = 'wallColorChange',
     NEW_GAME = 'newGame',
+    NEW_USER = 'newUser',
     GAME_OVER = 'gameOver',
     Eliminated = 'eliminated',
     PING = 'ping'
@@ -26,7 +27,16 @@ export interface MoveAction extends BaseAction {
     angle: number;
     originalCreationTime: number;
 }
+export interface NewUserAction extends BaseAction {
+    type: ActionTypes.NEW_USER;
+    x: number;
+    y: number;
+    angle:number;
 
+    screen:GameSize;
+    originalCreationTime: number;
+
+}
 export interface ShootAction extends BaseAction {
     type: ActionTypes.SHOOT;
     // bullet: Bullet;
@@ -67,7 +77,7 @@ export type Action =
     | WallColorChangeAction
     | NewGameAction
     | GameOverAction
-    | PingAction| EliminatedAction;
+    | PingAction| EliminatedAction | NewUserAction;
 
 // Define the interface for action methods
 export interface ActionMethods {

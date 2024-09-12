@@ -31,8 +31,10 @@ export const Constants = {
     WALL_SIZE: 100,
 
     // Ping & timeout intervals
-    PING_INTERVAL: 10000, // 10 seconds
-    PING_TIMEOUT: 15000, // 15 seconds
+    PING_INTERVAL: 3000, // ms
+    PING_TIMEOUT: 7000, // 2 missed pings allowed.
+    GETMAZE_TIMEOUT: 900, // ms players can stay without map
+
     // Teleport
     // If the angle is greater than n radians, reject teleportation
     MAX_TELEPORT_DEGREES: Math.PI / 4, // 45 degrees in radians

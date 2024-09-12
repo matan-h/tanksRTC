@@ -24,6 +24,7 @@ export class Game {
     private keys: { [key: string]: boolean } = {};
     private winMessage: string = '';
     private restartTimeout: number | null = null;
+
     private room: Room;
     private actions: actionType;
 
@@ -32,10 +33,9 @@ export class Game {
         canvas.style.visibility = "visible";
 
         this.ctx = canvas.getContext('2d')!;
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
 
         this.originalGameSize = this.gameSize = fixSize({ height: canvas.height, width: canvas.width })
+        this.setGameSize(this.gameSize)
 
         this.localTank = new Tank(
             this.gameSize.width / 2,
@@ -62,6 +62,12 @@ export class Game {
 
         this.setupEventListeners();
         this.startNewGame();
+        this.gameLoop();
+    }
+    setGameSize(gameSize: GameSize) {
+        this.ctx.canvas.width = gameSize.width;
+        this.ctx.canvas.height = gameSize.height;
+        this.gameSize = gameSize
     }
 
     private joinRoom(roomId: string): Room {
@@ -110,9 +116,9 @@ export class Game {
             angle: this.localTank.angle,
             screen: this.localTank.player.originalScreenSize,
             originalCreationTime: this.localTank.originalCreationTime,
-            seed:this.maze?.seed
+            seed: this.maze?.seed
         }, peerId);
-        
+
     }
 
     private handlePeerLeave(peerId: string) {
@@ -132,14 +138,11 @@ export class Game {
             case ActionTypes.SHOOT:
                 this.handleShootAction(data, peerId);
                 break;
-            case ActionTypes.MAZE:
-                this.generateMaze(data.seed, data.gamesize)
-                break;
             case ActionTypes.WALL_COLOR_CHANGE:
                 this.handleWallColorChange(data, peerId);
-                break;
-            case ActionTypes.NEW_GAME:
-                this.localGotoRandom()
+                break; 
+            case ActionTypes.NEW_MAZE:
+                this.localGotoRandom(); this.generateMaze(data.seed, data.gamesize)
                 break;
             case ActionTypes.NEW_USER:
                 this.handleNewUser(data, peerId);
@@ -167,7 +170,7 @@ export class Game {
      * handle the newUserAction - called to a new tank that joined into the room, then after that, when tank sync
      */
     private handleNewUser(data: NewUserAction, peerId: string) {
-        
+
         if (this.tank(peerId)) return // the sendAction->handleNewUser->sendAction is a loop.
 
         this.sendAction({
@@ -177,7 +180,7 @@ export class Game {
             angle: this.localTank.angle,
             screen: this.originalGameSize,
             originalCreationTime: this.localTank.originalCreationTime,
-            seed:this.maze?.seed
+            seed: this.maze?.seed
         }, peerId)
 
         const size = fixSize(data.screen);
@@ -197,19 +200,15 @@ export class Game {
         );
         this.remoteTanks.push(tank);
         //
-        
+
         const lowestSizeTank = this.getLowestTank();
-        if (data.seed && data.seed !==this.maze?.seed && lowestSizeTank.player.peerId===peerId){
-            console.log("[debug] [handleNewUser] generating maze...",lowestSizeTank.player.originalScreenSize)
-            this.generateMaze(data.seed,lowestSizeTank.player.originalScreenSize)
+        if (data.seed && data.seed !== this.maze?.seed && lowestSizeTank.player.peerId === peerId) {
+            console.log("[debug] [handleNewUser] generating maze...", lowestSizeTank.player.originalScreenSize)
+            this.generateMaze(data.seed, lowestSizeTank.player.originalScreenSize)
         }
-        if ( lowestSizeTank === this.localTank && this.maze) {
-            this.sendAction({ type: ActionTypes.MAZE, seed: this.maze.seed, gamesize: this.gameSize }, peerId);
+        if (lowestSizeTank === this.localTank && this.maze) {
+            this.sendAction({ type: ActionTypes.NEW_MAZE, seed: this.maze.seed, gamesize: this.gameSize }, peerId);
         }
-        console.timeEnd('fromstart')
-
-
-
 
     }
     private handleEliminatedAction(data: EliminatedAction, peerId: string) {
@@ -290,12 +289,15 @@ export class Game {
         console.trace("generateMaze", seed, gamesize)
         const newMaze = generateMaze(gamesize, Constants.WALL_SIZE, seed);
         if (this.gameSize !== gamesize) {
-            this.ctx.canvas.width = gamesize.width;
-            this.ctx.canvas.height = gamesize.height;
-
-            this.gameSize = gamesize
+            this.setGameSize(gamesize)
         }
         this.maze = { walls: newMaze, seed: seed, }
+
+    }
+    private listen_Maze(failed_tank: Tank) {
+        if (this.maze) return
+        console.log("tank did not make maze it time:removing", failed_tank.player.peerId)
+        this.removeTank(failed_tank.player.peerId); this.startNewGame()
 
     }
 
@@ -304,6 +306,8 @@ export class Game {
 
         // Reset game state
         this.winMessage = '';
+        this.maze = null;
+
         this.bullets = [];
         [...this.remoteTanks, this.localTank].forEach(x => x.isEliminated = false)
         //
@@ -311,17 +315,19 @@ export class Game {
         const lowestSizeTank = this.getLowestTank();
         if (lowestSizeTank === this.localTank) {
             // this.sendAction({ type: ActionTypes.MAZE, seed: this.maze.seed, gamesize: this.gameSize },peerId);
-            if (!this.maze) {
-                const seed = Math.random();
-                this.generateMaze(seed, this.gameSize);
-            }
+            // if (!this.maze) {
+            const seed = Math.random();
+            this.generateMaze(seed, this.gameSize);
+            // }
 
 
-            console.log('Attempt to start a new game\nRemote:', [...this.remoteTanks.map(tank => tank.originalCreationTime), this.localTank.originalCreationTime].sort(), selfId);
-            this.sendAction({ type: ActionTypes.MAZE, seed: this.maze!.seed, gamesize: this.gameSize });
-            this.sendAction({ type: ActionTypes.NEW_GAME });
+            console.log('Attempt to start a new game');
+            // this.sendAction({ type: ActionTypes.MAZE, seed: this.maze!.seed, gamesize: this.gameSize });
+            this.sendAction({ type: ActionTypes.NEW_MAZE, seed: this.maze!.seed, gamesize: this.gameSize });
         } else {
+
             console.log('Waiting for PID// TODO', lowestSizeTank.player.peerId);
+            setTimeout(() => this.listen_Maze(lowestSizeTank), Constants.GETMAZE_TIMEOUT)
             // TODO: handle the case it errors.
         }
 
@@ -329,7 +335,6 @@ export class Game {
 
 
         // Start the game loop
-        this.gameLoop();
     }
     private onGameOver(winningTank: Tank) {
 
@@ -369,7 +374,8 @@ export class Game {
 
 
     private gameLoop() {
-        if (this.checkGameOverConditions()) return
+        // if gameover, wait until end of timer
+        if (this.checkGameOverConditions()) { requestAnimationFrame(() => this.gameLoop());; return }
 
         // TODO: clear the whole aria alwase
         this.ctx.clearRect(0, 0, this.originalGameSize.width, this.originalGameSize.height);
@@ -397,6 +403,7 @@ export class Game {
         this.checkInactiveTanks();
 
         requestAnimationFrame(() => this.gameLoop());
+
     }
 
     private drawWalls() {

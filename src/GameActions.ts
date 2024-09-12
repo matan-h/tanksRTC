@@ -9,7 +9,7 @@ export enum ActionTypes {
     SHOOT = 'shoot',
     MAZE = 'maze',
     WALL_COLOR_CHANGE = 'wallColorChange',
-    NEW_GAME = 'newGame',
+    NEW_MAZE = 'newGame',
     NEW_USER = 'newUser',
     GAME_OVER = 'gameOver',
     Eliminated = 'eliminated',
@@ -43,19 +43,16 @@ export interface ShootAction extends BaseAction {
     // bullet: Bullet;
 }
 
-export interface MazeAction extends BaseAction {
-    type: ActionTypes.MAZE;
-    seed: number;
-    gamesize:GameSize
-}
-
 export interface WallColorChangeAction extends BaseAction {
     type: ActionTypes.WALL_COLOR_CHANGE;
     wallsUpdated: { wallIndex: number; }[];
 }
 
-export interface NewGameAction extends BaseAction {
-    type: ActionTypes.NEW_GAME;
+export interface NewMazeAction extends BaseAction {
+    type: ActionTypes.NEW_MAZE;
+    seed: number;
+    gamesize:GameSize
+
 }
 
 export interface GameOverAction extends BaseAction {
@@ -74,9 +71,8 @@ export interface PingAction extends BaseAction {
 export type Action =
     | MoveAction
     | ShootAction
-    | MazeAction
     | WallColorChangeAction
-    | NewGameAction
+    | NewMazeAction
     | GameOverAction
     | PingAction| EliminatedAction | NewUserAction;
 

@@ -1,27 +1,43 @@
 import { Game } from "./Game";
 
-// Initialization
-const roomIdStr = 'roomId'
-const params = new URLSearchParams(location.search)
-const query_id = params.get(roomIdStr)
+// Constants for HTML element IDs
+const ROOM_ID_INPUT_ID = 'roomId';
+const ROOM_ID_FORM_ID = 'roomIdForm';
+const ROOM_ID_BUTTON_ID = 'roomIdButton';
 
-const RoomIdInput = document.getElementById(roomIdStr) as HTMLInputElement
-if (query_id) RoomIdInput.value = query_id;
+// Initialize URLSearchParams and retrieve the room ID from query parameters
+const params = new URLSearchParams(location.search);
+const queryId = params.get(ROOM_ID_INPUT_ID);
 
+// Get HTML elements and cast them to the appropriate types
+const roomIdInput = document.getElementById(ROOM_ID_INPUT_ID) as HTMLInputElement;
+const htmlForm = document.getElementById(ROOM_ID_FORM_ID) as HTMLFormElement;
+const roomIdButton = document.getElementById(ROOM_ID_BUTTON_ID) as HTMLButtonElement;
 
-const HTMLform = document.getElementById('roomIdForm') as HTMLFormElement;
-const RoomIdButton = document.getElementById("roomIdButton") as HTMLButtonElement
+// Set the value of the input field if a room ID is provided in the query parameters
+if (queryId) {
+    roomIdInput.value = queryId;
+}
 
-RoomIdButton.disabled = false;
+// Enable the button (assuming it should be enabled when the page loads)
+roomIdButton.disabled = false;
 
-
-HTMLform.addEventListener('submit', (event) => {
-    
+// Handle form submission
+htmlForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    HTMLform.style.display = 'none';
+    
+    // Hide the form after submission
+    htmlForm.style.display = 'none';
 
-    const roomId = RoomIdInput.value.trim()||"public";
-    if (query_id!==roomId){params.set(roomIdStr,roomId); window.history.replaceState(null, '', "?"+params);}
+    // Get the room ID from the input or default to "public"
+    const roomId = roomIdInput.value.trim() || "public";
 
-    new Game('gameCanvas', (roomId || "public"));
+    // Update URL parameters if the room ID has changed
+    if (queryId !== roomId) {
+        params.set(ROOM_ID_INPUT_ID, roomId);
+        window.history.replaceState(null, '', "?" + params.toString());
+    }
+
+    // Initialize the Game instance
+    new Game('gameCanvas', roomId);
 });

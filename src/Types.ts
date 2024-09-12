@@ -33,7 +33,6 @@ export interface TankControls {
 };
 
 
-// Utility function for defining coordinates
 export interface Point {
     x: number;
     y: number;

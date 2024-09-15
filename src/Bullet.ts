@@ -95,7 +95,7 @@ export class Bullet {
         if (age <= Constants.BULLET_LIFE) {
             ctx.save();
             ctx.globalAlpha = this.alpha;
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = Constants.BULLET_COLOR;
             ctx.fillRect(
                 this.x - Constants.BULLET_SIZE / 2,
                 this.y - Constants.BULLET_SIZE / 2,

@@ -242,7 +242,7 @@ export class Tank {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        ctx.fillStyle = this.isEliminated ? 'lightgrey' : this.color;
+        ctx.fillStyle = this.isEliminated ? 'lightgray' : this.color;
         ctx.fillRect(-Constants.TANK_SIZE / 2, -Constants.TANK_SIZE / 2, Constants.TANK_SIZE, Constants.TANK_SIZE);
         ctx.beginPath();
         ctx.moveTo(Constants.TANK_SIZE / 2, Constants.TANK_SIZE / 2);

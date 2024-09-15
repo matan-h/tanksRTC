@@ -66,7 +66,7 @@ export function generateMaze(size: GameSize, wallSize: number, seed: number): Wa
                     y: j * wallSize,
                     width: wallSize,
                     height: wallSize,
-                    originalColor: 'gray'
+                    originalColor: Constants.WALL_COLOR
                 });
             }
         }

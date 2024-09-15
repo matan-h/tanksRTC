@@ -39,6 +39,8 @@ export class Game {
         this.ctx = canvas.getContext('2d')!;
         this.originalGameSize = this.gameSize = fixSize({ height: window.innerHeight, width: window.innerWidth });
         this.setGameSize(this.gameSize);
+        this.roomId = roomId;
+        this.setupRoom();
 
         // Initialize local tank
         this.localTank = new Tank(
@@ -48,7 +50,6 @@ export class Game {
             { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', shoot: ' ' },
             { peerId: selfId, originalScreenSize: this.originalGameSize }
         );
-        this.roomId = roomId;
 
         this.room = this.joinRoom(roomId);
         this.actions = this.createActions();
@@ -63,56 +64,66 @@ export class Game {
         this.startNewGame();
         this.gameLoop();
     }
-
+    
     /**
      * Set the game size and resize the canvas.
-     */
-    setGameSize(gameSize: GameSize) {
+    */
+   setGameSize(gameSize: GameSize) {
         this.ctx.canvas.width = gameSize.width;
         this.ctx.canvas.height = gameSize.height;
         this.gameSize = gameSize;
     }
-
+    
     private joinRoom(roomId: string): Room {
         // Join a room with the given ID
         return joinRoom({ appId: Constants.APP_ID }, roomId);
     }
-
+    
     private createActions(): actionType {
         // Create actions for sending and receiving data
         const [sendAction, getAction] = this.room.makeAction('action');
         return { send: sendAction, receive: getAction };
     }
-
+    
     private setupEventListeners() {
         // Clear keys on certain events
         const clearKeys = () => this.keys = {};
         window.addEventListener('blur', clearKeys);
         window.addEventListener('contextmenu', clearKeys);
-
+        
         // Handle key down and up events
         window.addEventListener('keydown', (event) => {
             this.keys[event.key] = true;
         });
-
+        
         window.addEventListener('keyup', (event) => {
             this.keys[event.key] = false;
         });
-
+        
         // Handle room events
         this.room.onPeerJoin(this.registerInPID.bind(this));
         this.room.onPeerLeave(this.handlePeerLeave.bind(this));
         this.actions.receive(this.handleAction.bind(this));
-
+        
         // Periodically send a ping
         // setInterval(this.sendPing.bind(this), Constants.PING_INTERVAL);
     }
-
+    
     private GetTank(peerId: string): Tank | undefined {
         // Find a tank by peer ID
         return this.remoteTanks.find(t => t.player.peerId === peerId);
     }
+    setupRoom() {
+        if (this.roomId===Constants.ADMIN_ROOM.split(([] as unknown as string)+([] as unknown as string)).reduce((a,b)=>b.toUpperCase()+a.toLowerCase())){ // yap, thats easter egg
+            Constants.TANK_SPEED = Constants.TANK_SPEED*2
+            Constants.WALL_VSPACING = Constants.WALL_VSPACING*5
+            Constants.WALL_COLOR = 'silver'
+            Constants.BG_COLOR = 'black'
+            Constants.BULLET_COLOR = 'white'
 
+        }
+    }
+    
     private registerInPID(peerId: string) {
         console.log(`${peerId} joined`);
         this.sendAction({
@@ -369,6 +380,8 @@ export class Game {
         }
 
         this.ctx.clearRect(0, 0, window.innerWidth,window.innerHeight);
+        this.ctx.fillStyle = Constants.BG_COLOR
+        this.ctx.fillRect(0, 0, window.innerWidth,window.innerHeight);
 
         if (this.maze) {
             const { shootBullet, wallsUpdated } = this.localTank.updateControls(this.keys, this.bullets, this.maze!.walls, this.gameSize);
@@ -396,7 +409,7 @@ export class Game {
 
     private drawWalls() {
         if (!this.maze) return;
-        this.ctx.fillStyle = 'gray'; // Default color
+        // this.ctx.fillStyle = Constants.WALL_COLOR; // Default color
         this.maze.walls.forEach(wall => {
             this.ctx.fillStyle = wall.currentColor || wall.originalColor;
             this.ctx.fillRect(wall.x, wall.y, wall.width - Constants.WALL_VSPACING, wall.height - Constants.WALL_VSPACING);

@@ -21,6 +21,7 @@ export const Constants = {
     INACTIVE_TANKS_TIMEOUT: 3000, //ms //TODO
 
     // Bullet properties
+    BULLET_COLOR:"black",
     BULLET_SPEED: 5,
     BULLET_SIZE: 10,
     BULLET_LIFE: 6.7, // seconds
@@ -46,5 +47,7 @@ export const Constants = {
 
     // Misc
     WALL_COLOR_CHANGE_DURATION: 300, // milliseconds
-    WINLOSE_BANNER_TIMEOUT:2000 // 2s
+    WINLOSE_BANNER_TIMEOUT:2000, // 2s
+    BG_COLOR:"rgba(0,0,0,0)",
+    ADMIN_ROOM:"ADMIN"
 };

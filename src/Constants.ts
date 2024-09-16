@@ -22,10 +22,10 @@ export const Constants = {
 
     // Bullet properties
     BULLET_COLOR:"black",
-    BULLET_SPEED: 5,
+    BULLET_SPEED: 1,
     BULLET_SIZE: 10,
     BULLET_LIFE: 6.7, // seconds
-    BULLET_FADE_START: 2, // seconds
+    BULLET_FADE_START: 5.7, // seconds
 
     // Wall properties
     WALL_COLOR: 'gray',

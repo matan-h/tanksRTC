@@ -14,16 +14,18 @@ export class Bullet {
     alpha: number;
     creationTime: number;
     owner: string;
+    color: string;
 
     constructor(id: number, x: number, y: number, dx: number, dy: number, owner: string) {
         this.id = id;
         this.x = x;
         this.y = y;
-        this.dx = dx;
-        this.dy = dy;
+        this.dx = dx*Constants.BULLET_SPEED;
+        this.dy = dy*Constants.BULLET_SPEED;
         this.alpha = 1.0; // Bullet starts fully opaque
         this.creationTime = Date.now(); // Time of bullet creation
         this.owner = owner; // Identifier for the bullet's owner
+        this.color = Constants.BULLET_COLOR
     }
 
     /**
@@ -95,7 +97,7 @@ export class Bullet {
         if (age <= Constants.BULLET_LIFE) {
             ctx.save();
             ctx.globalAlpha = this.alpha;
-            ctx.fillStyle = Constants.BULLET_COLOR;
+            ctx.fillStyle = this.color;
             ctx.fillRect(
                 this.x - Constants.BULLET_SIZE / 2,
                 this.y - Constants.BULLET_SIZE / 2,

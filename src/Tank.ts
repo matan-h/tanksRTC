@@ -131,6 +131,7 @@ export class Tank {
                     Math.sin(this.angle) * 5,
                     this.player.peerId
                 );
+                bullet.color = this.color
                 this.lastShotTime = now;
                 bullets.push(bullet);
                 return bullet;

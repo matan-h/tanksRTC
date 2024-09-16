@@ -116,11 +116,14 @@ export class Game {
     setupRoom() {
         if (this.roomId===Constants.ADMIN_ROOM.split(([] as unknown as string)+([] as unknown as string)).reduce((a,b)=>b.toUpperCase()+a.toLowerCase())){ // yap, thats easter egg
             Constants.TANK_SPEED = Constants.TANK_SPEED*2
-            Constants.WALL_VSPACING = Constants.WALL_VSPACING*5
+            Constants.WALL_VSPACING = 0.05
             Constants.WALL_COLOR = 'silver'
             Constants.BG_COLOR = 'black'
-            Constants.BULLET_COLOR = 'white'
-
+            
+            Constants.BULLET_SPEED = Constants.BULLET_SPEED*2
+        }
+        else{
+            console.log('room is normal')
         }
     }
     
@@ -234,7 +237,7 @@ export class Game {
     }
 
     private handleEliminatedAction(data: EliminatedAction, tank?: Tank) {
-        if (tank) {
+        if (tank) {            
             tank.isEliminated = true;
             this.bullets = this.bullets.filter(b => (b.owner !== tank.player.peerId && b.id !== data.bullet_id));
         }

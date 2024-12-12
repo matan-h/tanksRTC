@@ -30,6 +30,8 @@ export class Game {
     private restartTimeout: number | null = null;
     private joystick: VirtualJoystick | null = null;
     private isMobile: boolean;
+    private joystickAngle: number = 0;
+    private joystickSpeed: number = 0;
 
     private room: Room;
     private roomId: string;
@@ -57,7 +59,10 @@ export class Game {
         
         if (this.isMobile) {
             this.joystick = new VirtualJoystick('joystick', 50);
-            this.joystick.onMove(this.updateKeysFromJoystick.bind(this));
+            this.joystick.onMove((x, y) => {
+                this.joystickAngle = Math.atan2(y, x);
+                this.joystickSpeed = Math.min(1, Math.sqrt(x * x + y * y));
+            });
             const shootButton = document.createElement('button');
             shootButton.id = 'shootButton';
             shootButton.innerText = 'Shoot';
@@ -134,13 +139,6 @@ export class Game {
     
     private handleKeyUp(event: KeyboardEvent) {
         this.keys[event.key] = false;
-    }
-    
-    private updateKeysFromJoystick(x: number, y: number) {
-        this.keys['ArrowUp'] = y > 0.2;
-        this.keys['ArrowDown'] = y < -0.2;
-        this.keys['ArrowLeft'] = x < -0.2;
-        this.keys['ArrowRight'] = x > 0.2;
     }
     
     private GetTank(peerId: string): Tank | undefined {

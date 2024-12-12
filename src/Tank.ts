@@ -44,10 +44,11 @@ export class Tank {
     /**
      * Updates the tank's state based on controls and collisions.
      */
-    updateControls(keys: { [key: string]: boolean }, bullets: Bullet[], walls: Wall[], size: GameSize) {
+    updateControls(controllers: Controllers, bullets: Bullet[], walls: Wall[], size: GameSize) {
         if (!this.controls || this.isEliminated) {
             return { shootBullet: null, wallsUpdated: null };
         }
+        const { keys, joystickAngle, joystickSpeed } = controllers;
 
         let shootBullet: Bullet | null = null;
         const wallsUpdated: { wallIndex: number }[] = [];
@@ -56,7 +57,7 @@ export class Tank {
             shootBullet = this.shoot(bullets) || null;
         }
 
-        const { newX, newY } = this.move(keys);
+        const { newX, newY } = this.move(keys, joystickSpeed);
         let angle = this.angle;
         if (keys[this.controls.left]) {
             angle -= 0.1; // Rotate left
@@ -64,7 +65,6 @@ export class Tank {
         if (keys[this.controls.right]) {
             angle += 0.1; // Rotate right
         }
-        const joystickAngle = (window as any).dbg.game.joystickAngle;
         let angular_difference = joystickAngle - angle;
         angular_difference = ((angular_difference + Math.PI) % (2 * Math.PI) - Math.PI)/10;
         angle += angular_difference;
@@ -147,11 +147,10 @@ export class Tank {
     /**
      * Calculates the new position based on movement controls.
      */
-    private move(keys: { [key: string]: boolean }) {
+    private move(keys: { [key: string]: boolean }, joystickSpeed: number) {
         const speed = this.speed;
         let newX = this.x;
         let newY = this.y;
-        const joystickSpeed = (window as any).dbg.game.joystickSpeed;
 
         if (keys[this.controls!.up]) {
             newX += Math.cos(this.angle) * speed;

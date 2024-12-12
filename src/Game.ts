@@ -424,7 +424,7 @@ export class Game {
         this.ctx.fillRect(0, 0, window.innerWidth,window.innerHeight);
 
         if (this.maze) {
-            const { shootBullet, wallsUpdated } = this.localTank.updateControls(this.keys, this.bullets, this.maze!.walls, this.gameSize);
+            const { shootBullet, wallsUpdated } = this.localTank.updateControls({ keys: this.keys, joystickAngle: this.joystickAngle, joystickSpeed: this.joystickSpeed }, this.bullets, this.maze!.walls, this.gameSize);
             if (shootBullet) this.sendAction({ type: ActionTypes.SHOOT });
             if (wallsUpdated) this.sendAction({ type: ActionTypes.WALL_COLOR_CHANGE, wallsUpdated: wallsUpdated });
         }

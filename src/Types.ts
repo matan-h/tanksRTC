@@ -35,6 +35,12 @@ export interface TankControls {
     shoot: string;
 };
 
+export interface Controllers {
+    keys: { [key: string]: boolean };
+    joystickAngle: number;
+    joystickSpeed: number;
+}
+
 
 export interface Point {
     x: number;

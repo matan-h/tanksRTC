@@ -3,7 +3,7 @@
 import { Constants } from './Constants';
 import { Bullet } from './Bullet';
 import { findGroupEnd, isPointInTriangle, pointInRotatedRectangle, rotatePoint } from './Utils';
-import { GameSize, Player, TankControls, TankShape, Wall } from './Types';
+import { Controllers, GameSize, Player, TankControls, TankShape, Wall } from './Types';
 
 export class Tank {
     // Tank properties

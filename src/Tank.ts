@@ -151,6 +151,7 @@ export class Tank {
         const speed = this.speed;
         let newX = this.x;
         let newY = this.y;
+        const joystickSpeed = (window as any).dbg.game.joystickSpeed;
 
         if (keys[this.controls!.up]) {
             newX += Math.cos(this.angle) * speed;
@@ -160,6 +161,9 @@ export class Tank {
             newX -= Math.cos(this.angle) * speed;
             newY -= Math.sin(this.angle) * speed;
         }
+        
+        newX += Math.cos(this.angle) * speed * joystickSpeed;
+        newY += Math.sin(this.angle) * speed * joystickSpeed;
 
         return { newX, newY };
     }

@@ -56,6 +56,7 @@ export class VirtualJoystick {
     private handleEnd() {
         this.isDragging = false;
         this.resetHandlePosition();
+        this.currentPosition = { ...this.startPosition };
         this.onMove();
     }
 

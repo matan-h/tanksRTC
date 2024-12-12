@@ -66,6 +66,7 @@ export class Tank {
             angle += 0.1; // Rotate right
         }
         let angular_difference = joystickAngle - angle;
+
         if (joystickSpeed > 0) {
             angular_difference = ((angular_difference + Math.PI) % (2 * Math.PI) - Math.PI) / 10;
             angle += angular_difference;

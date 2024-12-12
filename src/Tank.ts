@@ -69,6 +69,7 @@ export class Tank {
 
         if (joystickSpeed > 0) {
             angular_difference = ((angular_difference + Math.PI) % (2 * Math.PI) - Math.PI) / 10;
+            angular_difference = Math.max(Math.min(angular_difference, 0.1), -0.1);
             angle += angular_difference;
         }
 

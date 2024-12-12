@@ -49,3 +49,43 @@ canvas {
 #roomIdForm button:hover {
   background-color: #0056b3;
 }
+
+.joystick-container {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 100px;
+    height: 100px;
+    background-color: rgba(128, 128, 128, 0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+}
+
+.joystick-handle {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    touch-action: none;
+}
+
+#shootButton {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    touch-action: none;
+}
+
+#shootButton:hover {
+    background-color: #45a049;
+}

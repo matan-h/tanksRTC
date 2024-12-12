@@ -9,6 +9,7 @@ import {
     NewUserAction, PingAction, ShootAction, WallColorChangeAction
 } from './GameActions';
 import { Constants } from './Constants';
+import { VirtualJoystick } from './VirtualJoystick';
 import { dummyrandom, fixSize, generateMaze, getRandomColor, StringToSeed } from './Utils';
 import { selfId, joinRoom, Room, ActionSender, DataPayload, ActionReceiver } from 'trystero';
 
@@ -27,6 +28,8 @@ export class Game {
     private keys: { [key: string]: boolean } = {};
     private winMessage: string = '';
     private restartTimeout: number | null = null;
+    private joystick: VirtualJoystick | null = null;
+    private isMobile: boolean;
 
     private room: Room;
     private roomId: string;
@@ -41,6 +44,7 @@ export class Game {
         this.setGameSize(this.gameSize);
         this.roomId = roomId;
         this.setupRoom();
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         // Initialize local tank
         this.localTank = new Tank(
@@ -50,6 +54,19 @@ export class Game {
             { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', shoot: ' ' },
             { peerId: selfId, originalScreenSize: this.originalGameSize }
         );
+        
+        if (this.isMobile) {
+            this.joystick = new VirtualJoystick('joystick', 50);
+            this.joystick.onMove(this.updateKeysFromJoystick.bind(this));
+            const shootButton = document.createElement('button');
+            shootButton.id = 'shootButton';
+            shootButton.innerText = 'Shoot';
+            shootButton.addEventListener('touchstart', () => {
+                this.handleKeyDown({ key: ' ' } as KeyboardEvent);
+                setTimeout(() => this.handleKeyUp({ key: ' ' } as KeyboardEvent), 100);
+            });
+            document.body.appendChild(shootButton);
+        }
 
         this.room = this.joinRoom(roomId);
         this.actions = this.createActions();
@@ -92,13 +109,15 @@ export class Game {
         window.addEventListener('contextmenu', clearKeys);
         
         // Handle key down and up events
-        window.addEventListener('keydown', (event) => {
-            this.keys[event.key] = true;
-        });
-        
-        window.addEventListener('keyup', (event) => {
-            this.keys[event.key] = false;
-        });
+        if (!this.isMobile) {
+            window.addEventListener('keydown', (event) => {
+                this.handleKeyDown(event);
+            });
+            
+            window.addEventListener('keyup', (event) => {
+                this.handleKeyUp(event);
+            });
+        }
         
         // Handle room events
         this.room.onPeerJoin(this.registerInPID.bind(this));
@@ -107,6 +126,21 @@ export class Game {
         
         // Periodically send a ping
         // setInterval(this.sendPing.bind(this), Constants.PING_INTERVAL);
+    }
+    
+    private handleKeyDown(event: KeyboardEvent) {
+        this.keys[event.key] = true;
+    }
+    
+    private handleKeyUp(event: KeyboardEvent) {
+        this.keys[event.key] = false;
+    }
+    
+    private updateKeysFromJoystick(x: number, y: number) {
+        this.keys['ArrowUp'] = y > 0.2;
+        this.keys['ArrowDown'] = y < -0.2;
+        this.keys['ArrowLeft'] = x < -0.2;
+        this.keys['ArrowRight'] = x > 0.2;
     }
     
     private GetTank(peerId: string): Tank | undefined {

@@ -64,6 +64,12 @@ export class Tank {
         if (keys[this.controls.right]) {
             angle += 0.1; // Rotate right
         }
+        if (this.player.peerId === 'local') {
+            const joystickAngle = (window as any).dbg.game.joystickAngle;
+            let angular_difference = joystickAngle - angle;
+            angular_difference = (angular_difference + Math.PI) % (2 * Math.PI) - Math.PI;
+            angle += angular_difference;
+        }
 
         const OOB = this.howOutOfBounds(newX, newY, angle, size);
 

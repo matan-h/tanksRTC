@@ -60,8 +60,13 @@ export class Game {
         if (this.isMobile) {
             this.joystick = new VirtualJoystick('joystick', 50);
             this.joystick.onMove((x, y) => {
-                this.joystickAngle = Math.atan2(y, x);
-                this.joystickSpeed = Math.min(1, Math.sqrt(x * x + y * y));
+                const magnitude = Math.sqrt(x * x + y * y);
+                this.joystickSpeed = Math.min(1, magnitude);
+                if (magnitude > 0.1) {
+                    this.joystickAngle = Math.atan2(y, x);
+                } else {
+                    this.joystickSpeed = 0;
+                }
             });
             const shootButton = document.createElement('button');
             shootButton.id = 'shootButton';

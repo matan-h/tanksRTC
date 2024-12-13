@@ -42,11 +42,13 @@ export class Game {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         canvas.style.visibility = "visible";
         this.ctx = canvas.getContext('2d')!;
-        this.originalGameSize = this.gameSize = fixSize({ height: window.innerHeight, width: window.innerWidth });
-        this.setGameSize(this.gameSize);
-        this.roomId = roomId;
-        this.setupRoom();
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.originalGameSize = this.gameSize = this.isMobile ?
+            { height: window.innerHeight, width: window.innerWidth } :
+            fixSize({ height: window.innerHeight, width: window.innerWidth });
+        this.setGameSize(this.gameSize);
+        this.roomId = this.isMobile ? `${roomId}-mobile` : roomId;
+        this.setupRoom();
 
         // Initialize local tank
         this.localTank = new Tank(
@@ -56,8 +58,9 @@ export class Game {
             { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', shoot: ' ' },
             { peerId: selfId, originalScreenSize: this.originalGameSize }
         );
-        
         if (this.isMobile) {
+            this.originalGameSize = this.gameSize = fixSizeMobile({ height: window.innerHeight, width: window.innerWidth });
+            this.setGameSize(this.gameSize);
             this.joystick = new VirtualJoystick('joystick', 50);
             this.joystick.onMove((x, y) => {
                 const magnitude = Math.sqrt(x * x + y * y);

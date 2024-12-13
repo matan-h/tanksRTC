@@ -88,6 +88,17 @@ export function fixSize(size: GameSize): GameSize {
 }
 
 /**
+ * Clamps the game size between the mobile minimum and maximum dimensions.
+ * @param size - The game size object.
+ * @returns The clamped game size.
+ */
+export function fixSizeMobile(size: GameSize): GameSize {
+    size.height = clamp(size.height, Constants.MIN_MOBILE_GAME_HEIGHT, Constants.MAX_MOBILE_GAME_HEIGHT);
+    size.width = clamp(size.width, Constants.MIN_MOBILE_GAME_WIDTH, Constants.MAX_MOBILE_GAME_WIDTH);
+    return size;
+}
+
+/**
  * Checks if a given point is inside a rectangular boundary.
  * @param x - The x-coordinate of the point.
  * @param y - The y-coordinate of the point.

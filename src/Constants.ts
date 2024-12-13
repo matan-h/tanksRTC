@@ -11,6 +11,12 @@ export const Constants = {
     MAX_GAME_WIDTH: 1920,
     MAX_GAME_HEIGHT: 1080,
 
+    // Mobile game configurations
+    MIN_MOBILE_GAME_WIDTH: 400,
+    MIN_MOBILE_GAME_HEIGHT: 300,
+    MAX_MOBILE_GAME_WIDTH: 1080,
+    MAX_MOBILE_GAME_HEIGHT: 720,
+
     // Tank properties
     TANK_SPEED: 3,
     TANK_ROTATION_SPEED: 0.1,

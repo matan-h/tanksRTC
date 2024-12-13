@@ -88,6 +88,19 @@ export function fixSize(size: GameSize): GameSize {
 }
 
 /**
+ * Automatically adjusts the game size based on the room ID.
+ * @param roomId - The ID of the game room.
+ * @param size - The game size object.
+ * @returns The adjusted game size.
+ */
+export function autoFixSize(roomId: string, size: GameSize): GameSize {
+    if (roomId.endsWith('-mobile')) {
+        return fixSizeMobile(size);
+    }
+    return fixSize(size);
+}
+
+/**
  * Clamps the game size between the mobile minimum and maximum dimensions.
  * @param size - The game size object.
  * @returns The clamped game size.

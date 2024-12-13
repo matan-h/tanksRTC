@@ -37,17 +37,17 @@ export class Game {
     private roomId: string;
     private actions: actionType;
 
-    constructor(canvasId: string, roomId: string) {
+    constructor(canvasId: string, roomId: string, isMobile: boolean) {
         // Initialize canvas and context
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         canvas.style.visibility = "visible";
         this.ctx = canvas.getContext('2d')!;
-        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.isMobile = isMobile;
         this.originalGameSize = this.gameSize = this.isMobile ?
             { height: window.innerHeight, width: window.innerWidth } :
             fixSize({ height: window.innerHeight, width: window.innerWidth });
         this.setGameSize(this.gameSize);
-        this.roomId = this.isMobile ? `${roomId}-mobile` : roomId;
+        this.roomId = roomId;
         this.setupRoom();
 
         // Initialize local tank

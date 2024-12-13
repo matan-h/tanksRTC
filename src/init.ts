@@ -30,7 +30,12 @@ htmlForm.addEventListener('submit', (event) => {
     htmlForm.style.display = 'none';
 
     // Get the room ID from the input or default to "public"
-    const roomId = roomIdInput.value.trim() || "public";
+    let roomId = roomIdInput.value.trim() || "public";
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        roomId = `${roomId}-mobile`;
+    }
 
     // Update URL parameters if the room ID has changed
     if (queryId !== roomId) {
@@ -39,5 +44,5 @@ htmlForm.addEventListener('submit', (event) => {
     }
 
     // Initialize the Game instance
-    new Game('gameCanvas', roomId);
+    new Game('gameCanvas', roomId, isMobile);
 });

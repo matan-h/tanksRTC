@@ -10,7 +10,7 @@ import {
 } from './GameActions';
 import { Constants } from './Constants';
 import { VirtualJoystick } from './VirtualJoystick';
-import { dummyrandom, fixSize, generateMaze, getRandomColor, StringToSeed } from './Utils';
+import { dummyrandom, fixSize, fixSizeMobile, generateMaze, getRandomColor, StringToSeed } from './Utils';
 import { selfId, joinRoom, Room, ActionSender, DataPayload, ActionReceiver } from 'trystero';
 
 // Type alias for action type sender and receiver

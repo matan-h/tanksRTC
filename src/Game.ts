@@ -45,7 +45,7 @@ export class Game {
         this.isMobile = isMobile;
         this.originalGameSize = this.gameSize = this.isMobile ?
             { height: window.innerHeight, width: window.innerWidth } :
-            fixSize({ height: window.innerHeight, width: window.innerWidth });
+            autoFixSize(roomId, { height: window.innerHeight, width: window.innerWidth });
         this.setGameSize(this.gameSize);
         this.roomId = roomId;
         this.setupRoom();
@@ -59,7 +59,7 @@ export class Game {
             { peerId: selfId, originalScreenSize: this.originalGameSize }
         );
         if (this.isMobile) {
-            this.originalGameSize = this.gameSize = fixSizeMobile({ height: window.innerHeight, width: window.innerWidth });
+            this.originalGameSize = this.gameSize = autoFixSize(roomId, { height: window.innerHeight, width: window.innerWidth });
             this.setGameSize(this.gameSize);
             this.joystick = new VirtualJoystick('joystick', 50);
             this.joystick.onMove((x, y) => {

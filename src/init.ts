@@ -40,7 +40,7 @@ htmlForm.addEventListener("submit", (event) => {
 			navigator.userAgent,
 		);
 
-	if (isMobile) {
+	if (isMobile && !roomId.endsWith("-mobile")) {
 		roomId = `${roomId}-mobile`;
 	}
 

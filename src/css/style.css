@@ -1,91 +1,91 @@
 body {
-  margin: 0;
-  overflow: hidden;
-  background: #f0f0f0;
-  font-family: Arial, sans-serif;
+	margin: 0;
+	overflow: hidden;
+	background: #f0f0f0;
+	font-family: Arial, sans-serif;
 }
 
 canvas {
-  display: block;
-  background: #fff;
-  border: 1px solid #000;
+	display: block;
+	background: #fff;
+	border: 1px solid #000;
 }
 
 #roomIdForm {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 20px;
-  background: #fff;
-  border: 2px solid #000;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	padding: 20px;
+	background: #fff;
+	border: 2px solid #000;
+	border-radius: 8px;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 #roomIdForm label {
-  display: block;
-  margin-bottom: 10px;
+	display: block;
+	margin-bottom: 10px;
 }
 
 #roomIdForm input {
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+	padding: 10px;
+	margin-bottom: 10px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
 }
 
 #roomIdForm button {
-  width: 100%;
-  padding: 10px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
+	width: 100%;
+	padding: 10px;
+	background-color: #007bff;
+	color: #fff;
+	border: none;
+	border-radius: 4px;
+	font-size: 16px;
+	cursor: pointer;
 }
 
 #roomIdForm button:hover {
-  background-color: #0056b3;
+	background-color: #0056b3;
 }
 
 .joystick-container {
-    position: fixed;
-    bottom: 40px;
-    left: 20px;
-    width: 100px;
-    height: 100px;
-    background-color: rgba(128, 128, 128, 0.5);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: none;
+	position: fixed;
+	bottom: 40px;
+	left: 20px;
+	width: 100px;
+	height: 100px;
+	background-color: rgba(128, 128, 128, 0.5);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	touch-action: none;
 }
 
 .joystick-handle {
-    width: 40px;
-    height: 40px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-radius: 50%;
-    touch-action: none;
+	width: 40px;
+	height: 40px;
+	background-color: rgba(0, 0, 0, 0.7);
+	border-radius: 50%;
+	touch-action: none;
 }
 
 #shootButton {
-    position: fixed;
-    bottom: 40px;
-    right: 20px;
-    padding: 15px 20px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    touch-action: none;
+	position: fixed;
+	bottom: 40px;
+	right: 20px;
+	padding: 15px 20px;
+	background-color: #4caf50;
+	color: white;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 16px;
+	touch-action: none;
 }
 
 #shootButton:hover {
-    background-color: #45a049;
+	background-color: #45a049;
 }

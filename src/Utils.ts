@@ -12,26 +12,30 @@ import { GameSize, Point, Wall } from "./Types";
  * @returns A Point representing the normal vector.
  */
 export function calculateNormal(
-    objectLeft: number,
-    objectRight: number,
-    objectTop: number,
-    objectBottom: number,
-    wall: Wall
+	objectLeft: number,
+	objectRight: number,
+	objectTop: number,
+	objectBottom: number,
+	wall: Wall,
 ): Point {
-    const leftDistance = Math.abs(objectRight - wall.x);
-    const rightDistance = Math.abs(objectLeft - (wall.x + wall.width));
-    const topDistance = Math.abs(objectBottom - wall.y);
-    const bottomDistance = Math.abs(objectTop - (wall.y + wall.height));
+	const leftDistance = Math.abs(objectRight - wall.x);
+	const rightDistance = Math.abs(objectLeft - (wall.x + wall.width));
+	const topDistance = Math.abs(objectBottom - wall.y);
+	const bottomDistance = Math.abs(objectTop - (wall.y + wall.height));
 
-    if (leftDistance < rightDistance && leftDistance < topDistance && leftDistance < bottomDistance) {
-        return { x: -1, y: 0 }; // Collision on the left side
-    } else if (rightDistance < topDistance && rightDistance < bottomDistance) {
-        return { x: 1, y: 0 }; // Collision on the right side
-    } else if (topDistance < bottomDistance) {
-        return { x: 0, y: -1 }; // Collision on the top side
-    } else {
-        return { x: 0, y: 1 }; // Collision on the bottom side
-    }
+	if (
+		leftDistance < rightDistance &&
+		leftDistance < topDistance &&
+		leftDistance < bottomDistance
+	) {
+		return { x: -1, y: 0 }; // Collision on the left side
+	} else if (rightDistance < topDistance && rightDistance < bottomDistance) {
+		return { x: 1, y: 0 }; // Collision on the right side
+	} else if (topDistance < bottomDistance) {
+		return { x: 0, y: -1 }; // Collision on the top side
+	} else {
+		return { x: 0, y: 1 }; // Collision on the bottom side
+	}
 }
 
 /**
@@ -39,42 +43,50 @@ export function calculateNormal(
  * @returns A randomly generated UUID v4 string.
  */
 export function uuidv4(): string {
-    return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
-        ((+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4) >>> 0).toString(16)
-    );
+	return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
+		(
+			(+c ^
+				(crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))) >>>
+			0
+		).toString(16),
+	);
 }
 
 /**
  * Utility function to generate a random maze based on a given width and height.
- * 
+ *
  * @param width - The width of the maze in pixels.
  * @param height - The height of the maze in pixels.
  * @param wallSize - The size of each wall block in pixels.
  * @param seed - the seed to do the dummyrandom on each random.
  * @returns An array of Wall objects representing the maze.
  */
-export function generateMaze(size: GameSize, wallSize: number, seed: number): Wall[] {
-    const maze: Wall[] = [];
-    const mazeWidth = Math.floor(size.width / wallSize);
-    const mazeHeight = Math.floor(size.height / wallSize);
+export function generateMaze(
+	size: GameSize,
+	wallSize: number,
+	seed: number,
+): Wall[] {
+	const maze: Wall[] = [];
+	const mazeWidth = Math.floor(size.width / wallSize);
+	const mazeHeight = Math.floor(size.height / wallSize);
 
-    for (let i = 0; i < mazeWidth; i++) {
-        for (let j = 0; j < mazeHeight; j++) {
-            if (dummyrandom((seed + i) / (j + 1)) < 0.3) { // Adjust density of walls
-                maze.push({
-                    x: i * wallSize,
-                    y: j * wallSize,
-                    width: wallSize,
-                    height: wallSize,
-                    originalColor: Constants.WALL_COLOR
-                });
-            }
-        }
-    }
+	for (let i = 0; i < mazeWidth; i++) {
+		for (let j = 0; j < mazeHeight; j++) {
+			if (dummyrandom((seed + i) / (j + 1)) < 0.3) {
+				// Adjust density of walls
+				maze.push({
+					x: i * wallSize,
+					y: j * wallSize,
+					width: wallSize,
+					height: wallSize,
+					originalColor: Constants.WALL_COLOR,
+				});
+			}
+		}
+	}
 
-    return maze;
+	return maze;
 }
-
 
 /**
  * Clamps the game size between the minimum and maximum dimensions.
@@ -82,9 +94,17 @@ export function generateMaze(size: GameSize, wallSize: number, seed: number): Wa
  * @returns The clamped game size.
  */
 export function fixSize(size: GameSize): GameSize {
-    size.height = clamp(size.height, Constants.MIN_GAME_HEIGHT, Constants.MAX_GAME_HEIGHT);
-    size.width = clamp(size.width, Constants.MIN_GAME_WIDTH, Constants.MAX_GAME_WIDTH);
-    return size;
+	size.height = clamp(
+		size.height,
+		Constants.MIN_GAME_HEIGHT,
+		Constants.MAX_GAME_HEIGHT,
+	);
+	size.width = clamp(
+		size.width,
+		Constants.MIN_GAME_WIDTH,
+		Constants.MAX_GAME_WIDTH,
+	);
+	return size;
 }
 
 /**
@@ -94,10 +114,10 @@ export function fixSize(size: GameSize): GameSize {
  * @returns The adjusted game size.
  */
 export function autoFixSize(roomId: string, size: GameSize): GameSize {
-    if (roomId.endsWith('-mobile')) {
-        return fixSizeMobile(size);
-    }
-    return fixSize(size);
+	if (roomId.endsWith("-mobile")) {
+		return fixSizeMobile(size);
+	}
+	return fixSize(size);
 }
 
 /**
@@ -106,9 +126,17 @@ export function autoFixSize(roomId: string, size: GameSize): GameSize {
  * @returns The clamped game size.
  */
 export function fixSizeMobile(size: GameSize): GameSize {
-    size.height = clamp(size.height, Constants.MIN_MOBILE_GAME_HEIGHT, Constants.MAX_MOBILE_GAME_HEIGHT);
-    size.width = clamp(size.width, Constants.MIN_MOBILE_GAME_WIDTH, Constants.MAX_MOBILE_GAME_WIDTH);
-    return size;
+	size.height = clamp(
+		size.height,
+		Constants.MIN_MOBILE_GAME_HEIGHT,
+		Constants.MAX_MOBILE_GAME_HEIGHT,
+	);
+	size.width = clamp(
+		size.width,
+		Constants.MIN_MOBILE_GAME_WIDTH,
+		Constants.MAX_MOBILE_GAME_WIDTH,
+	);
+	return size;
 }
 
 /**
@@ -118,8 +146,17 @@ export function fixSizeMobile(size: GameSize): GameSize {
  * @param rect - The rectangle boundary.
  * @returns True if the point is inside the rectangle, otherwise false.
  */
-export function isPointInRect(x: number, y: number, rect: { x: number, y: number, width: number, height: number }): boolean {
-    return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
+export function isPointInRect(
+	x: number,
+	y: number,
+	rect: { x: number; y: number; width: number; height: number },
+): boolean {
+	return (
+		x >= rect.x &&
+		x <= rect.x + rect.width &&
+		y >= rect.y &&
+		y <= rect.y + rect.height
+	);
 }
 
 /**
@@ -130,15 +167,15 @@ export function isPointInRect(x: number, y: number, rect: { x: number, y: number
  * @returns The rotated point.
  */
 export function rotatePoint(point: Point, center: Point, angle: number): Point {
-    const cosTheta = Math.cos(angle);
-    const sinTheta = Math.sin(angle);
-    const dx = point.x - center.x;
-    const dy = point.y - center.y;
+	const cosTheta = Math.cos(angle);
+	const sinTheta = Math.sin(angle);
+	const dx = point.x - center.x;
+	const dy = point.y - center.y;
 
-    return {
-        x: cosTheta * dx - sinTheta * dy + center.x,
-        y: sinTheta * dx + cosTheta * dy + center.y
-    };
+	return {
+		x: cosTheta * dx - sinTheta * dy + center.x,
+		y: sinTheta * dx + cosTheta * dy + center.y,
+	};
 }
 
 /**
@@ -150,11 +187,22 @@ export function rotatePoint(point: Point, center: Point, angle: number): Point {
  * @param v3 - The third vertex of the triangle.
  * @returns True if the point is inside the triangle, otherwise false.
  */
-export function isPointInTriangle(px: number, py: number, v1: Point, v2: Point, v3: Point): boolean {
-    const area = (v1.x * (v2.y - v3.y) + v2.x * (v3.y - v1.y) + v3.x * (v1.y - v2.y)) / 2;
-    const s = 1 / (2 * area) * (v1.x * (v2.y - py) + v2.x * (py - v1.y) + px * (v1.y - v2.y));
-    const t = 1 / (2 * area) * (v1.x * (py - v3.y) + px * (v3.y - v1.y) + v3.x * (v1.y - py));
-    return s >= 0 && t >= 0 && (s + t) <= 1;
+export function isPointInTriangle(
+	px: number,
+	py: number,
+	v1: Point,
+	v2: Point,
+	v3: Point,
+): boolean {
+	const area =
+		(v1.x * (v2.y - v3.y) + v2.x * (v3.y - v1.y) + v3.x * (v1.y - v2.y)) / 2;
+	const s =
+		(1 / (2 * area)) *
+		(v1.x * (v2.y - py) + v2.x * (py - v1.y) + px * (v1.y - v2.y));
+	const t =
+		(1 / (2 * area)) *
+		(v1.x * (py - v3.y) + px * (v3.y - v1.y) + v3.x * (v1.y - py));
+	return s >= 0 && t >= 0 && s + t <= 1;
 }
 
 /**
@@ -164,27 +212,34 @@ export function isPointInTriangle(px: number, py: number, v1: Point, v2: Point, 
  * @param corners - The four corners of the rotated rectangle.
  * @returns True if the point is inside the rectangle, otherwise false.
  */
-export function pointInRotatedRectangle(px: number, py: number, corners: Point[]): boolean {
-    const dotProduct = (v1: Point, v2: Point) => v1.x * v2.x + v1.y * v2.y;
-    const subtract = (p1: Point, p2: Point) => ({ x: p1.x - p2.x, y: p1.y - p2.y });
+export function pointInRotatedRectangle(
+	px: number,
+	py: number,
+	corners: Point[],
+): boolean {
+	const dotProduct = (v1: Point, v2: Point) => v1.x * v2.x + v1.y * v2.y;
+	const subtract = (p1: Point, p2: Point) => ({
+		x: p1.x - p2.x,
+		y: p1.y - p2.y,
+	});
 
-    const axes = [
-        subtract(corners[1], corners[0]), // Edge between corner 0 and corner 1
-        subtract(corners[3], corners[0])  // Edge between corner 0 and corner 3
-    ];
+	const axes = [
+		subtract(corners[1], corners[0]), // Edge between corner 0 and corner 1
+		subtract(corners[3], corners[0]), // Edge between corner 0 and corner 3
+	];
 
-    for (const axis of axes) {
-        const projections = corners.map(corner => dotProduct(corner, axis));
-        const minRectProj = Math.min(...projections);
-        const maxRectProj = Math.max(...projections);
-        const bulletProj = dotProduct({ x: px, y: py }, axis);
+	for (const axis of axes) {
+		const projections = corners.map((corner) => dotProduct(corner, axis));
+		const minRectProj = Math.min(...projections);
+		const maxRectProj = Math.max(...projections);
+		const bulletProj = dotProduct({ x: px, y: py }, axis);
 
-        if (bulletProj < minRectProj || bulletProj > maxRectProj) {
-            return false; // No overlap on this axis, no collision
-        }
-    }
+		if (bulletProj < minRectProj || bulletProj > maxRectProj) {
+			return false; // No overlap on this axis, no collision
+		}
+	}
 
-    return true; // Overlap on both axes, collision detected
+	return true; // Overlap on both axes, collision detected
 }
 
 /**
@@ -193,12 +248,15 @@ export function pointInRotatedRectangle(px: number, py: number, corners: Point[]
  * @param normal - The normal vector of the surface.
  * @returns The reflected vector.
  */
-export function reflectVector(vector: { dx: number, dy: number }, normal: Point): { dx: number, dy: number } {
-    const dotProduct = vector.dx * normal.x + vector.dy * normal.y;
-    return {
-        dx: vector.dx - 2 * dotProduct * normal.x,
-        dy: vector.dy - 2 * dotProduct * normal.y
-    };
+export function reflectVector(
+	vector: { dx: number; dy: number },
+	normal: Point,
+): { dx: number; dy: number } {
+	const dotProduct = vector.dx * normal.x + vector.dy * normal.y;
+	return {
+		dx: vector.dx - 2 * dotProduct * normal.x,
+		dy: vector.dy - 2 * dotProduct * normal.y,
+	};
 }
 
 /**
@@ -209,7 +267,7 @@ export function reflectVector(vector: { dx: number, dy: number }, normal: Point)
  * @returns The clamped value.
  */
 export function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
+	return Math.max(min, Math.min(max, value));
 }
 
 /**
@@ -219,7 +277,7 @@ export function clamp(value: number, min: number, max: number): number {
  * @returns The distance between the two points.
  */
 export function distance(p1: Point, p2: Point): number {
-    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+	return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
 /**
@@ -228,7 +286,7 @@ export function distance(p1: Point, p2: Point): number {
  * @returns A numerical seed value.
  */
 export function StringToSeed(str: string): number {
-    return Array.from(str, c => c.charCodeAt(0)).reduce((a, b) => a + b, 0);
+	return Array.from(str, (c) => c.charCodeAt(0)).reduce((a, b) => a + b, 0);
 }
 
 /**
@@ -237,8 +295,18 @@ export function StringToSeed(str: string): number {
  * @returns A random color from the predefined set.
  */
 export function getRandomColor(seed: number): string {
-    const colors = ['red', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan', 'magenta', 'gold'];
-    return colors[Math.floor(dummyrandom(seed) * colors.length)];
+	const colors = [
+		"red",
+		"green",
+		"yellow",
+		"purple",
+		"orange",
+		"pink",
+		"cyan",
+		"magenta",
+		"gold",
+	];
+	return colors[Math.floor(dummyrandom(seed) * colors.length)];
 }
 
 /**
@@ -251,69 +319,83 @@ export function getRandomColor(seed: number): string {
  * @param isMovingBackward - Indicates if the movement is in reverse.
  * @returns An object containing the end position and the group of walls, or null if invalid.
  */
-export function findGroupEnd(angle: number, startX: number, startY: number, walls: Wall[], size: GameSize, isMovingBackward: boolean): { x: number; y: number; group: Wall[] } | null {
-    const group: Wall[] = [];
-    const tankMinSize = Constants.TANK_SIZE / 16;
-    let endX = startX;
-    let endY = startY;
+export function findGroupEnd(
+	angle: number,
+	startX: number,
+	startY: number,
+	walls: Wall[],
+	size: GameSize,
+	isMovingBackward: boolean,
+): { x: number; y: number; group: Wall[] } | null {
+	const group: Wall[] = [];
+	const tankMinSize = Constants.TANK_SIZE / 16;
+	let endX = startX;
+	let endY = startY;
 
-    // Adjust angle for backward movement
-    if (isMovingBackward) {
-        angle += Math.PI; // Move in the opposite direction
-    }
+	// Adjust angle for backward movement
+	if (isMovingBackward) {
+		angle += Math.PI; // Move in the opposite direction
+	}
 
-    const cosAngle = Math.cos(angle);
-    const sinAngle = Math.sin(angle);
+	const cosAngle = Math.cos(angle);
+	const sinAngle = Math.sin(angle);
 
-    // Determine movement direction
-    const isMovingRight = cosAngle > 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
-    const isMovingLeft = cosAngle < 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
-    const isMovingDown = sinAngle > 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
-    const isMovingUp = sinAngle < 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
+	// Determine movement direction
+	const isMovingRight = cosAngle > 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
+	const isMovingLeft = cosAngle < 0 && Math.abs(cosAngle) > Math.abs(sinAngle);
+	const isMovingDown = sinAngle > 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
+	const isMovingUp = sinAngle < 0 && Math.abs(sinAngle) > Math.abs(cosAngle);
 
-    // Determine movement offsets based on direction
-    const offsetX = isMovingRight ? 1 : isMovingLeft ? -1 : 0;
-    const offsetY = isMovingDown ? 1 : isMovingUp ? -1 : 0;
+	// Determine movement offsets based on direction
+	const offsetX = isMovingRight ? 1 : isMovingLeft ? -1 : 0;
+	const offsetY = isMovingDown ? 1 : isMovingUp ? -1 : 0;
 
-    // Extend in the movement direction while consecutive walls are found
-    for (let i = 0; i < Constants.MAX_TELEPORT_DISTANCE; i++) {
-        const nextWall = walls.find(wall => {
-            const withinX = (endX + offsetX * tankMinSize) >= wall.x && (endX + offsetX * tankMinSize) <= (wall.x + wall.width);
-            const withinY = (endY + offsetY * tankMinSize) >= wall.y && (endY + offsetY * tankMinSize) <= (wall.y + wall.height);
-            return withinX && withinY;
-        });
+	// Extend in the movement direction while consecutive walls are found
+	for (let i = 0; i < Constants.MAX_TELEPORT_DISTANCE; i++) {
+		const nextWall = walls.find((wall) => {
+			const withinX =
+				endX + offsetX * tankMinSize >= wall.x &&
+				endX + offsetX * tankMinSize <= wall.x + wall.width;
+			const withinY =
+				endY + offsetY * tankMinSize >= wall.y &&
+				endY + offsetY * tankMinSize <= wall.y + wall.height;
+			return withinX && withinY;
+		});
 
-        if (nextWall) {
-            group.push(nextWall);
+		if (nextWall) {
+			group.push(nextWall);
 
-            // Update end position based on movement direction
-            if (isMovingRight) {
-                endX = nextWall.x + nextWall.width + tankMinSize;
-            } else if (isMovingLeft) {
-                endX = nextWall.x - tankMinSize;
-            } else if (isMovingDown) {
-                endY = nextWall.y + nextWall.height + tankMinSize;
-            } else if (isMovingUp) {
-                endY = nextWall.y - tankMinSize;
-            }
-        } else {
-            // No more consecutive walls found, stop extending
-            break;
-        }
-    }
+			// Update end position based on movement direction
+			if (isMovingRight) {
+				endX = nextWall.x + nextWall.width + tankMinSize;
+			} else if (isMovingLeft) {
+				endX = nextWall.x - tankMinSize;
+			} else if (isMovingDown) {
+				endY = nextWall.y + nextWall.height + tankMinSize;
+			} else if (isMovingUp) {
+				endY = nextWall.y - tankMinSize;
+			}
+		} else {
+			// No more consecutive walls found, stop extending
+			break;
+		}
+	}
 
-    // Ensure the final position is within the game bounds
-    if (endX < tankMinSize || endX > (size.width - tankMinSize) ||
-        endY < tankMinSize || endY > (size.height - tankMinSize)) {
-        return null;
-    }
+	// Ensure the final position is within the game bounds
+	if (
+		endX < tankMinSize ||
+		endX > size.width - tankMinSize ||
+		endY < tankMinSize ||
+		endY > size.height - tankMinSize
+	) {
+		return null;
+	}
 
-    return { x: endX, y: endY, group };
+	return { x: endX, y: endY, group };
 }
 
-
 // so/a:19303725 : This isn't a uniform sampler. the '10000' is the amount of 'uniformness' it have
-export function dummyrandom(seed: number) { 
-    const x = Math.sin(seed++) * 1000000;
-    return x - Math.floor(x);
+export function dummyrandom(seed: number) {
+	const x = Math.sin(seed++) * 1000000;
+	return x - Math.floor(x);
 }
